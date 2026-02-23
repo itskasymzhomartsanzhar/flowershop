@@ -1,0 +1,105 @@
+.notifications {
+  padding: 0 16px;
+
+  &__title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 20px 0;
+    color: var(--text-primary, #333);
+  }
+
+  &__card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.2s ease;
+
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__content {
+    flex: 1;
+  }
+
+  &__label {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--text-primary, #333);
+  }
+
+  &__description {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    color: var(--text-secondary, #666);
+  }
+
+  &__switch {
+    --button-width: 3.5em;
+    --button-height: 2em;
+    --toggle-diameter: 1.5em;
+    --button-toggle-offset: calc((var(--button-height) - var(--toggle-diameter)) / 2);
+    --toggle-shadow-offset: 10px;
+    --toggle-wider: 3em;
+    --color-grey: #cccccc;
+    --color-green: var(--primary);
+
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  &__input {
+    display: none;
+
+    &:checked + .notifications__slider {
+      background-color: var(--color-green);
+
+      &::after {
+        transform: translateX(calc(var(--button-width) - var(--toggle-diameter) - var(--button-toggle-offset)));
+        box-shadow: calc(var(--toggle-shadow-offset) * -1) 0 calc(var(--toggle-shadow-offset) * 4) rgba(0, 0, 0, 0.1);
+      }
+    }
+
+    &:active + .notifications__slider::after {
+      width: var(--toggle-wider);
+    }
+
+    &:checked:active + .notifications__slider::after {
+      transform: translateX(calc(var(--button-width) - var(--toggle-wider) - var(--button-toggle-offset)));
+    }
+  }
+
+  &__slider {
+    display: inline-block;
+    width: var(--button-width);
+    height: var(--button-height);
+    background-color: var(--color-grey);
+    border-radius: calc(var(--button-height) / 2);
+    position: relative;
+    transition: 0.3s all ease-in-out;
+
+    &::after {
+      content: "";
+      display: inline-block;
+      width: var(--toggle-diameter);
+      height: var(--toggle-diameter);
+      background-color: #fff;
+      border-radius: calc(var(--toggle-diameter) / 2);
+      position: absolute;
+      top: var(--button-toggle-offset);
+      transform: translateX(var(--button-toggle-offset));
+      box-shadow: var(--toggle-shadow-offset) 0 calc(var(--toggle-shadow-offset) * 4) rgba(0, 0, 0, 0.1);
+      transition: 0.3s all ease-in-out;
+    }
+  }
+}

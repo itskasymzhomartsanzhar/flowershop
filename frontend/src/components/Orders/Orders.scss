@@ -1,0 +1,257 @@
+.orders {
+  &__title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 20px 16px;
+    color: var(--text-primary, #333);
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 16px 120px 16px;
+  }
+
+  &__card {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    padding: 16px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 100px;
+    gap: 12px;
+    overflow: hidden;
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+    min-width: 0;
+    width: 125px;
+    justify-content: center;
+
+    @media (max-width: 380px) {
+      gap: 4px;
+      width: 110px;
+    }
+  }
+
+  &__name {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary, #333);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+
+    @media (max-width: 380px) {
+      font-size: 13px;
+    }
+  }
+
+  &__price {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary, #000);
+    margin: 0;
+
+    @media (max-width: 380px) {
+      font-size: 12px;
+    }
+  }
+
+  &__date {
+    font-size: 12px;
+    color: var(--text-secondary, #666);
+    margin: 0;
+    font-weight: 400;
+
+    @media (max-width: 380px) {
+      font-size: 10px;
+    }
+  }
+
+  &__timeline {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    flex: 1;
+    padding: 4px 8px;
+    min-width: 0;
+    overflow: hidden;
+
+    @media (max-width: 380px) {
+      padding: 4px 4px;
+    }
+  }
+
+  &__stage {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__stage-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+
+    &--active {
+      .orders__stage-dot {
+        background-color: var(--primary);
+        border-color: var(--primary);
+      }
+
+      .orders__stage-label {
+        color: var(--primary);
+        font-weight: 600;
+      }
+    }
+
+    &--current {
+      .orders__stage-dot {
+        animation: pulse 2s infinite;
+      }
+
+      .orders__stage-label {
+        font-weight: 700;
+      }
+    }
+  }
+
+  &__stage-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #d9d9d9;
+    border: 2px solid #d9d9d9;
+    flex-shrink: 0;
+
+    @media (max-width: 380px) {
+      width: 10px;
+      height: 10px;
+    }
+  }
+
+  &__stage-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #999;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+
+    @media (max-width: 380px) {
+      font-size: 9px;
+    }
+  }
+
+  &__stage-line {
+    width: 3px;
+    height: 20px;
+    background-color: #e0e0e0;
+    flex-shrink: 0;
+    margin-left: 5.5px;
+
+    &--active {
+      background-color: var(--primary);
+    }
+
+    @media (max-width: 380px) {
+      height: 15px;
+      margin-left: 4px;
+    }
+  }
+
+  &__track-btn {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: var(--background-secondary, #f7f7f7);
+    color: var(--text-primary, #000);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 95px;
+    max-width: 110px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    align-self: center;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &--copied {
+      background: var(--primary);
+      color: white;
+    }
+
+    svg {
+      flex-shrink: 0;
+    }
+
+    span {
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.2;
+      word-wrap: break-word;
+      word-break: break-all;
+      max-width: 100%;
+    }
+
+    @media (max-width: 380px) {
+      min-width: 80px;
+      max-width: 80px;
+      padding: 8px 6px;
+      gap: 3px;
+
+      span {
+        font-size: 9px;
+      }
+
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
+  }
+}
+
+

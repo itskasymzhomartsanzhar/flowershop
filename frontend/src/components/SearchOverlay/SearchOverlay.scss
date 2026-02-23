@@ -1,0 +1,39 @@
+
+
+.search {
+  &-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #fff;
+    height: 92px;
+    display: flex;
+    align-items: center;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    padding: 0 16px 0 16px;
+    gap: 10px;
+  }
+
+  &-input-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: var(--background);
+    border-radius: 999px;
+    height: 51px;
+    min-width: 0;
+  }
+
+  &-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    padding: 0 18px;
+    color: #333;
+  }
+}

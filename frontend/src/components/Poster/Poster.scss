@@ -1,0 +1,13 @@
+.poster {
+  &-block {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &-img {
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

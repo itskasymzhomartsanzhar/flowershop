@@ -1,0 +1,232 @@
+.payment-success {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  padding: 10px 20px;
+
+  &__container {
+    max-width: 500px;
+    width: 100%;
+    background: white;
+    border-radius: 24px;
+    padding: 48px 32px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.5s ease-out;
+  }
+
+  &__title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 24px 0 16px;
+    line-height: 1.3;
+  }
+
+  &__message {
+    font-size: 16px;
+    color: #718096;
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  &__info {
+    background: #f7fafc;
+    border-radius: 16px;
+    padding: 15px 24px;
+    margin-bottom: 32px;
+    text-align: left;
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .info-icon {
+        width: 24px;
+        height: 24px;
+        color: var(--primary);
+        flex-shrink: 0;
+      }
+
+      span {
+        font-size: 14px;
+        color: #4a5568;
+        font-weight: 500;
+      }
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+
+    .btn {
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &-primary {
+        background: var(--primary);
+        color: white;
+
+        &:hover {
+          background: var(--primary);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+      }
+
+      &-secondary {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 2px solid #e2e8f0;
+
+        &:hover {
+          background: #edf2f7;
+          border-color: #cbd5e0;
+        }
+      }
+    }
+  }
+
+  &__redirect {
+    font-size: 13px;
+    color: #a0aec0;
+    margin: 0;
+  }
+}
+
+// Анимация галочки как на iPhone
+.checkmark-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  &.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.checkmark-circle {
+  width: 100px;
+  height: 100px;
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+
+  .checkmark {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: block;
+    stroke-width: 3;
+    stroke: var(--primary);
+    stroke-miterlimit: 10;
+    box-shadow: inset 0 0 0 var(--primary);
+    animation: fill 0.4s ease-in-out 0.4s forwards,
+      scale 0.3s ease-in-out 0.9s both;
+  }
+
+  .checkmark-circle-path {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 3;
+    stroke-miterlimit: 10;
+    stroke: var(--primary);
+    fill: none;
+    animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+  }
+
+  .checkmark-check {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    stroke: white;
+    stroke-width: 3;
+    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+  }
+}
+
+// Анимации
+@keyframes stroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes scale {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: scale3d(1.1, 1.1, 1);
+  }
+}
+
+@keyframes fill {
+  100% {
+    box-shadow: inset 0 0 0 50px var(--primary);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Адаптив
+@media (max-width: 768px) {
+  .payment-success {
+    padding: 16px;
+
+    &__container {
+      padding: 32px 24px;
+    }
+
+    &__title {
+      font-size: 24px;
+    }
+
+    &__actions {
+      .btn {
+        padding: 12px 24px;
+        font-size: 15px;
+      }
+    }
+  }
+
+  .checkmark-circle {
+    width: 80px;
+    height: 80px;
+
+    .checkmark {
+      width: 80px;
+      height: 80px;
+    }
+  }
+}

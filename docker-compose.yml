@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: swiftstore_backend
+    restart: always
+    command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    environment:
+      DEBUG: "False"
+      REDIS_URL: redis://host.docker.internal:6379/0
+      CELERY_BROKER_URL: redis://host.docker.internal:6379/0
+      CELERY_RESULT_BACKEND: redis://host.docker.internal:6379/0
+      ALLOWED_HOSTS: "localhost,127.0.0.1,swiftstore.tw1.su,swiftstore_backend,backend"
+      SECRET_KEY: django-insecure-d5lc8wkd0=l3zfhx68&6u2cqdukh-(q^k8gl0z=&zz=(!f=dv+
+      BOT_TOKEN: 8005862815:AAETT6MUfKe6306zgKXqEW-uFrcCjbBLZR4
+    networks:
+      - swiftstore_network
+    ports:
+      - "8010:8000"
+
+  bot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.bot
+    container_name: swiftstore_bot
+    restart: always
+    environment:
+      BOT_TOKEN: 8005862815:AAETT6MUfKe6306zgKXqEW-uFrcCjbBLZR4
+      REDIS_URL: redis://host.docker.internal:6379/0
+    networks:
+      - swiftstore_network
+
+  frontend:
+    image: node:20-alpine
+    container_name: frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - node_modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    networks:
+      - swiftstore_network
+    ports:
+      - "3010:5173"
+
+volumes:
+  static_volume:
+  media_volume:
+  node_modules:
+
+networks:
+  swiftstore_network:
+    driver: bridge
