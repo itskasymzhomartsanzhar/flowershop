@@ -9,7 +9,7 @@ SECRET_KEY = 'django-insecure-d5lc8wkd0=l3zfhx68&6u2cqdukh-(q^k8gl0z=&zz=(!f=dv+
 DEBUG = 'True'
 
 #DATACHANGE
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "swiftstore_backend", "flowershop.swifttest.ru" "backend"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "swiftstore_backend", "flowershop.swifttest.ru", "backend"]
 
 #DATACHANGE
 CSRF_TRUSTED_ORIGINS = [
