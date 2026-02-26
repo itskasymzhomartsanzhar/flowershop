@@ -1,12 +1,12 @@
 :root {
   --background: #f7f7f7;
   --background-secondary: #ffffff;
-  --primary: #18D588;
-  --secondary: #c8f0e0;
+  --primary: #818F58;
+  --secondary: #D9DECA;
   --border-radius: 12px;
   --gray: #707579;
 }
-
+/*7A8450*/
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);

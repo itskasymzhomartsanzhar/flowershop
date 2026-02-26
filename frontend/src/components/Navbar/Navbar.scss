@@ -7,7 +7,7 @@
   height: 90px;
   padding: 0 16px;
   z-index: 1;
-  background-color: var(--background-secondary);
+  background-color: #818F58;
   border-bottom-left-radius: 30px;
   border-bottom-right-radius: 30px;
 
@@ -38,7 +38,16 @@
   }
 }
 
+.logo {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
 .logoimg {
+  height: 100%;
   width: 170px;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
 }

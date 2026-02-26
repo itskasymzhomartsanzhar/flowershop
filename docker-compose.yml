@@ -1,60 +1,85 @@
 version: '3.8'
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: flowershop_redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - flowershop_redis_data:/data
+    networks:
+      - flowershop_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: swiftstore_backend
+    container_name: flowershop_backend
     restart: always
-    command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
+    command: sh -c "python manage.py migrate --noinput && gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
     volumes:
       - ./backend:/app
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
+      - flowershop_static:/app/staticfiles
+      - flowershop_media:/app/media
     environment:
       DEBUG: "False"
-      REDIS_URL: redis://host.docker.internal:6379/0
-      CELERY_BROKER_URL: redis://host.docker.internal:6379/0
-      CELERY_RESULT_BACKEND: redis://host.docker.internal:6379/0
-      ALLOWED_HOSTS: "localhost,127.0.0.1,swiftstore.tw1.su,swiftstore_backend,backend"
-      SECRET_KEY: django-insecure-d5lc8wkd0=l3zfhx68&6u2cqdukh-(q^k8gl0z=&zz=(!f=dv+
-      BOT_TOKEN: 8005862815:AAETT6MUfKe6306zgKXqEW-uFrcCjbBLZR4
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      ALLOWED_HOSTS: "localhost,127.0.0.1,flowershop.swifttest.ru,flowershop_backend"
+      SECRET_KEY: CHANGE_ME
+      BOT_TOKEN: 7898807263:AAEVGakrVXbQxLXE7jeMTThmruE0ZXz9RBE
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
-      - swiftstore_network
+      - flowershop_network
     ports:
-      - "8010:8000"
+      - "8120:8000"
 
   bot:
     build:
       context: ./backend
       dockerfile: Dockerfile.bot
-    container_name: swiftstore_bot
+    container_name: flowershop_bot
     restart: always
+    command: sh -c "until python manage.py migrate --noinput; do echo 'Waiting for DB migrations...'; sleep 3; done; python main.py"
     environment:
-      BOT_TOKEN: 8005862815:AAETT6MUfKe6306zgKXqEW-uFrcCjbBLZR4
-      REDIS_URL: redis://host.docker.internal:6379/0
+      BOT_TOKEN: 7898807263:AAEVGakrVXbQxLXE7jeMTThmruE0ZXz9RBE
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
     networks:
-      - swiftstore_network
+      - flowershop_network
 
   frontend:
     image: node:20-alpine
-    container_name: frontend
+    container_name: flowershop_frontend
     working_dir: /app
     volumes:
       - ./frontend:/app
-      - node_modules:/app/node_modules
+      - flowershop_node_modules:/app/node_modules
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     networks:
-      - swiftstore_network
+      - flowershop_network
     ports:
-      - "3010:5173"
+      - "3120:5173"
 
 volumes:
-  static_volume:
-  media_volume:
-  node_modules:
+  flowershop_static:
+  flowershop_media:
+  flowershop_node_modules:
+  flowershop_redis_data:
 
 networks:
-  swiftstore_network:
+  flowershop_network:
     driver: bridge

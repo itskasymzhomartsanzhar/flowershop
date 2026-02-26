@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ['flowershop.swifttest.ru'],
     proxy: {
       '/api': {
         target: 'https://flowershop.swifttest.ru',
