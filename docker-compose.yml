@@ -50,6 +50,8 @@ services:
     container_name: flowershop_bot
     restart: always
     command: sh -c "until python manage.py migrate --noinput; do echo 'Waiting for DB migrations...'; sleep 3; done; python main.py"
+    volumes:
+      - ./backend:/app
     environment:
       BOT_TOKEN: 7898807263:AAEVGakrVXbQxLXE7jeMTThmruE0ZXz9RBE
       REDIS_URL: redis://redis:6379/0
