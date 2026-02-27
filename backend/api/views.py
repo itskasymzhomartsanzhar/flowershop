@@ -1255,9 +1255,23 @@ class ProductViewSet(viewsets.ModelViewSet):
 class FavoritesViewSet(viewsets.ModelViewSet):
     serializer_class = FavoritesSerializer
     http_method_names = ['get', 'post', 'delete']
-    
+
+    @staticmethod
+    def _resolve_tg_id(request):
+        tg_id = None
+        user_data = getattr(request, 'tg_user_data', None)
+        if isinstance(user_data, dict):
+            tg_id = user_data.get('tg_id')
+        if not tg_id:
+            tg_id = request.headers.get('X-Tg-Id')
+        if not tg_id:
+            tg_id = request.data.get('tg_id') if hasattr(request, 'data') else None
+        if not tg_id:
+            tg_id = request.query_params.get('tg_id') if hasattr(request, 'query_params') else None
+        return tg_id
+
     def get_queryset(self):
-        tg_id = int(self.request.tg_user_data['tg_id'])
+        tg_id = self._resolve_tg_id(self.request)
 
         if tg_id:
             user = Users.objects.filter(tg_id=tg_id).first()
@@ -1270,10 +1284,10 @@ class FavoritesViewSet(viewsets.ModelViewSet):
         init_data = request.headers.get('InitData', '')
         product_id = request.data.get('product_id')
         
-        if not init_data or not product_id:
+        if not product_id:
             return Response({'error': 'Invalid data'}, status=400)
         
-        tg_id = self.request.tg_user_data.get('tg_id', None)
+        tg_id = self._resolve_tg_id(request)
 
         if tg_id:
             user = get_object_or_404(Users, tg_id=tg_id)
@@ -1296,14 +1310,13 @@ class FavoritesViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['delete'], url_path='remove')
     def remove_favorite(self, request):
-        init_data = request.headers.get('InitData', '')
         product_id = request.query_params.get('product_id')
         
-        if not init_data or not product_id:
+        if not product_id:
             return Response({'error': 'Invalid data'}, status=400)
         
         
-        tg_id = self.request.tg_user_data.get('tg_id', None)
+        tg_id = self._resolve_tg_id(request)
 
         # Проверяем наличие tg_id
         if tg_id:

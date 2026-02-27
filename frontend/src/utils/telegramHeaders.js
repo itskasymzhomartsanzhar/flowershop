@@ -3,6 +3,7 @@ const FALLBACK_INIT_DATA = 'query_id=AAHvA60xAgAAAO8DrTEiKsT7&user=%7B%22id%22%3
 export const getTelegramHeaders = () => ({
   'Content-Type': 'application/json',
   'InitData': window.Telegram?.WebApp?.initData || FALLBACK_INIT_DATA,
+  'X-Tg-Id': window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '',
 });
 
 export default getTelegramHeaders;
