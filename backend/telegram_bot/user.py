@@ -45,23 +45,34 @@ from . import keyboards as kb
 user_router = Router()
 
 
-bot = Bot('7898807263:AAEVGakrVXbQxLXE7jeMTThmruE0ZXz9RBE', default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(getenv('BOT_TOKEN', ''), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
 
 @user_router.message(CommandStart())
 async def start_message(message: Message, bot: Bot, command: CommandObject, state: FSMContext):
-    # Получаем или создаем пользователя
-    # Формируем полное имя из first_name и last_name
     full_name = f"{message.from_user.first_name or ''} {message.from_user.last_name or ''}".strip()
+    username = message.from_user.username or ''
+    display_name = full_name or username or 'Пользователь'
 
-    await sync_to_async(Users.objects.get_or_create)(
+    user, created = await sync_to_async(Users.objects.get_or_create)(
         tg_id=message.from_user.id,
         defaults={
-            'telegram_username': message.from_user.username or '',
-            'name': full_name or message.from_user.username or 'Пользователь',
+            'telegram_username': username,
+            'name': display_name,
         }
     )
+
+    if not created:
+        updated_fields = []
+        if username and user.telegram_username != username:
+            user.telegram_username = username
+            updated_fields.append('telegram_username')
+        if display_name and user.name != display_name:
+            user.name = display_name
+            updated_fields.append('name')
+        if updated_fields:
+            await sync_to_async(user.save)(update_fields=updated_fields)
 
     text = (
         "👋 Привет! Это интернет-магазин Flower Shop\n\n"
