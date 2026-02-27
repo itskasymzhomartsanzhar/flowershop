@@ -74,6 +74,16 @@ async def start_message(message: Message, bot: Bot, command: CommandObject, stat
         if updated_fields:
             await sync_to_async(user.save)(update_fields=updated_fields)
 
+    print(
+        "USER_REGISTERED",
+        {
+            "tg_id": user.tg_id,
+            "name": user.name,
+            "telegram_username": user.telegram_username,
+            "created": created,
+        }
+    )
+
     text = (
         "👋 Привет! Это интернет-магазин Flower Shop\n\n"
     )
