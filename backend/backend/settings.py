@@ -47,7 +47,8 @@ CORS_ALLOW_HEADERS = (
     'origin',
     'Authorization',
     'access-control-allow-methods',
-    'initData'
+    'initData',
+    'x-tg-id',
 )
 
 INSTALLED_APPS = [

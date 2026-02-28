@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import API_ENDPOINTS from '../utils/api';
 import getTelegramHeaders from '../utils/telegramHeaders';
+import { CART_UPDATED_EVENT, emitCartUpdated } from '../utils/cartEvents';
 
 export const useCart = () => {
   const [products, setProducts] = useState([]);
@@ -17,6 +18,14 @@ export const useCart = () => {
 
   useEffect(() => {
     fetchCart();
+  }, []);
+
+  useEffect(() => {
+    const handleCartUpdated = () => {
+      fetchCart();
+    };
+    window.addEventListener(CART_UPDATED_EVENT, handleCartUpdated);
+    return () => window.removeEventListener(CART_UPDATED_EVENT, handleCartUpdated);
   }, []);
 
   const fetchCart = () => {
@@ -59,6 +68,7 @@ export const useCart = () => {
       }),
     })
       .then(() => fetchCart())
+      .then(() => emitCartUpdated())
       .catch((err) => console.error('Ошибка при обновлении корзины:', err));
   };
 
@@ -69,6 +79,7 @@ export const useCart = () => {
       body: JSON.stringify({ product_id: productId }),
     })
       .then(() => fetchCart())
+      .then(() => emitCartUpdated())
       .catch((err) => console.error('Ошибка при удалении из корзины:', err));
   };
 
@@ -122,6 +133,7 @@ export const useCart = () => {
       headers: getTelegramHeaders(),
     })
       .then(() => fetchCart())
+      .then(() => emitCartUpdated())
       .catch((err) => console.error('Ошибка при очистке корзины:', err));
   };
 

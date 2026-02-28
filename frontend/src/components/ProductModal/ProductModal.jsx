@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import useCarousel from '../../hooks/useCarousel';
 import './ProductModal.scss';
+import formatPrice from '../../utils/formatPrice';
 
 const ProductModalCarousel = ({ product, onClose, onAddToCart, source = 'catalog' }) => {
   const photos = [];
@@ -147,7 +148,7 @@ const handleAddToCart = () => {
         )}
 
         <button className={`modal__add-btn ${isOutOfStock ? 'modal__add-btn--disabled' : ''}`} onClick={handleAddToCart} disabled={isOutOfStock}>
-          {isOutOfStock ? 'Нет в наличии' : `Добавить в корзину (${product.price * quantity}₽)`}
+          {isOutOfStock ? 'Нет в наличии' : `Добавить в корзину (${formatPrice(product.price * quantity)}₽)`}
         </button>
       </div>
     </div>

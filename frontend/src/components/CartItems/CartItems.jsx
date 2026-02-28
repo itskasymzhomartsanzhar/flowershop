@@ -1,6 +1,7 @@
 import './CartItems.scss';
 import { Link } from 'react-router-dom';
 import useCart from '../../hooks/useCart';
+import formatPrice from '../../utils/formatPrice';
 
 const CartItems = () => {
   const { products, counts, increment, decrement, calculateTotalPrice, clearCart, summary } = useCart();
@@ -38,7 +39,7 @@ const CartItems = () => {
               <img src={product.photo} alt={product.name} className="cart__image" />
               <div className="cart__info">
                 <h3 className="cart__title">{product.name}</h3>
-                <p className="cart__price">{product.price}₽</p>
+                <p className="cart__price">{formatPrice(product.price)}₽</p>
               </div>
 
               <div className="cart__counter">
@@ -56,11 +57,11 @@ const CartItems = () => {
             {serviceFee > 0 && (
               <div className="cart__fee-row">
                 <span>Сервисный сбор ({serviceFeePercent}%)</span>
-                <span>{serviceFee}₽</span>
+                <span>{formatPrice(serviceFee)}₽</span>
               </div>
             )}
             <button className="cart__checkout-btn">
-              Оформить заказ ({totalPrice}₽)
+              Оформить заказ ({formatPrice(totalPrice)}₽)
             </button>
           </div>
         </Link>

@@ -25,6 +25,7 @@
     border-radius: 999px;
     height: 51px;
     min-width: 0;
+    position: relative;
   }
 
   &-input {
@@ -35,5 +36,22 @@
     font-size: 15px;
     padding: 0 18px;
     color: #333;
+    caret-color: #333;
   }
+}
+
+.search-input-container.is-focused.is-empty::after {
+  content: '';
+  position: absolute;
+  left: 18px;
+  width: 1.5px;
+  height: 18px;
+  background: #333;
+  animation: search-caret-blink 1s steps(1) infinite;
+}
+
+@keyframes search-caret-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
 }

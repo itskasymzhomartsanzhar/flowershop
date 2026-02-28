@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import ProductModalCarousel from '../ProductModal/ProductModal';
 import getTelegramHeaders from '../../utils/telegramHeaders';
 import API_ENDPOINTS, { API_BASE_URL } from '../../utils/api';
+import formatPrice from '../../utils/formatPrice';
+import { emitCartUpdated } from '../../utils/cartEvents';
 import './Product.scss';
 
 const getQuantityStep = (product) => Math.max(1, Number(product?.quantity_step || 1));
@@ -163,6 +165,7 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
+      emitCartUpdated();
       if (closeModal) {
         setSelectedProduct(null);
       }
@@ -242,9 +245,9 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
 
               <div className="catalog__info">
                 <div className="catalog__price-row">
-                  <span className="catalog__price">{product.price}₽</span>
+                  <span className="catalog__price">{formatPrice(product.price)}₽</span>
                   {product.oldprice && product.oldprice > 0 && (
-                    <span className="catalog__price catalog__price--old">{product.oldprice}₽</span>
+                    <span className="catalog__price catalog__price--old">{formatPrice(product.oldprice)}₽</span>
                   )}
                 </div>
                 <h3 className="catalog__title">{product.name}</h3>
@@ -280,7 +283,7 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
                     disabled={isOutOfStock || isAdding}
                     onClick={(event) => quickAddToCart(product, event)}
                   >
-                    {isOutOfStock ? 'Нет в наличии' : isAdding ? 'Добавляем...' : `Добавить ${totalPrice}₽`}
+                    {isOutOfStock ? 'Нет в наличии' : isAdding ? 'Добавляем...' : `Добавить ${formatPrice(totalPrice)}₽`}
                   </button>
                 </div>
               </div>

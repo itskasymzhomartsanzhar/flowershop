@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../../utils/api';
 import { getTelegramHeaders } from '../../utils/telegramHeaders';
 import { copyToClipboard } from '../../utils/clipboard';
 import './Orders.scss';
+import formatPrice from '../../utils/formatPrice';
 
 const Orders = ({ onInitData }) => {
   const [products, setProducts] = useState([]);
@@ -87,7 +88,7 @@ const Orders = ({ onInitData }) => {
           >
             <div className="orders__info">
               <h3 className="orders__name">{order.name}</h3>
-              <p className="orders__price">{order.price}₽</p>
+              <p className="orders__price">{formatPrice(order.price)}₽</p>
               <p className="orders__date">{formatDate(order.order_date)}</p>
             </div>
 

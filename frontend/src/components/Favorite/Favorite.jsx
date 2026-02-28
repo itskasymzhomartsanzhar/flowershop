@@ -3,6 +3,8 @@ import ProductModalCarousel from '../ProductModal/ProductModal';
 import { API_ENDPOINTS } from '../../utils/api';
 import { getTelegramHeaders } from '../../utils/telegramHeaders';
 import './Favorite.scss';
+import formatPrice from '../../utils/formatPrice';
+import { emitCartUpdated } from '../../utils/cartEvents';
 import { Link, useLocation } from 'react-router-dom';
 
 const Favorite = () => {
@@ -59,6 +61,7 @@ const Favorite = () => {
       .then(res => res.json())
       .then(data => {
         setSelectedProduct(null);
+        emitCartUpdated();
       })
       .catch(err => {});
   };
@@ -111,9 +114,9 @@ const Favorite = () => {
                 </div>
 
                 <div className="catalog__info">
-                  <span className="catalog__price">{product.price}₽</span>
+                  <span className="catalog__price">{formatPrice(product.price)}₽</span>
                   {product.oldprice && product.oldprice > 0 && (
-                    <span className="catalog__price catalog__price--old">{product.oldprice}₽</span>
+                    <span className="catalog__price catalog__price--old">{formatPrice(product.oldprice)}₽</span>
                   )}
                   <h3 className="catalog__title">{product.name}</h3>
                   <div className="catalog__rating">

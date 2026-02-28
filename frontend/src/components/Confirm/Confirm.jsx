@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import getTelegramHeaders from '../../utils/telegramHeaders';
 import API_ENDPOINTS from '../../utils/api';
+import formatPrice from '../../utils/formatPrice';
 import './Confirm.scss';
 
 const PICKUP_ADDRESS = 'ул. Пушкина, дом 1';
@@ -495,7 +496,7 @@ const Confirm = () => {
           onClick={handlePayment}
           disabled={loading || paymentRequested || !canSubmit}
         >
-          {loading ? 'Обработка...' : paymentRequested ? 'Проверьте сообщения в боте' : `Оплатить через ЮKassa (${finalTotal}₽)`}
+          {loading ? 'Обработка...' : paymentRequested ? 'Проверьте сообщения в боте' : `Оплатить через ЮKassa (${formatPrice(finalTotal)}₽)`}
         </button>
       </div>
     </>

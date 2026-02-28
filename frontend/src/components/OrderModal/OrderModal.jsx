@@ -4,6 +4,7 @@ import getTelegramHeaders from '../../utils/telegramHeaders';
 import { copyToClipboard } from '../../utils/clipboard';
 import { API_BASE_URL } from '../../utils/api';
 import './OrderModal.scss';
+import formatPrice from '../../utils/formatPrice';
 
 const OrderModal = ({ order, onClose }) => {
   const [closing, setClosing] = useState(false);
@@ -185,7 +186,7 @@ useEffect(() => {
           </div>
 
           <h2 className="order-modal__title">{order.name}</h2>
-          <p className="order-modal__price">Итоговая сумма: {order.price}₽</p>
+          <p className="order-modal__price">Итоговая сумма: {formatPrice(order.price)}₽</p>
           <p className="order-modal__date">Дата заказа: {formatDate(order.order_date)}</p>
 
           {(order.track_code) && (
@@ -288,7 +289,7 @@ useEffect(() => {
                       <div className="order-modal__item-info">
                         <h4 className="order-modal__item-name">{item.product_info?.name || 'Товар'}</h4>
                         <p className="order-modal__item-details">
-                          {item.quantity} шт. × {item.price}₽
+                          {item.quantity} шт. × {formatPrice(item.price)}₽
                         </p>
                       </div>
                     </div>
