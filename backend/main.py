@@ -62,7 +62,7 @@ from telegram_bot.user import user_router
     
 async def main():
 
-    bot = Bot('7898807263:AAEVGakrVXbQxLXE7jeMTThmruE0ZXz9RBE', default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot(getenv('BOT_TOKEN', ''), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
     dp.include_routers(user_router)
 

@@ -24,7 +24,7 @@ YOOKASSA_ACCOUNT_ID = os.getenv('YOOKASSA_ACCOUNT_ID', '1134900')
 YOOKASSA_SECRET_KEY = os.getenv('YOOKASSA_SECRET_KEY', 'test_KuPzb4yyMFfgEfEYnfJ4gWO8QQtFTzA6TSqCaK3LuAs')
 PAYMENT_RETURN_URL = os.getenv('PAYMENT_RETURN_URL', 'https://swiftstore.tw1.su/')
 ORDER_ASSEMBLERS_CHAT_ID = os.getenv('ORDER_ASSEMBLERS_CHAT_ID', '')
-MOCK_PAYMENT_BUTTON = os.getenv('MOCK_PAYMENT_BUTTON', 'True').lower() == 'true'
+MOCK_PAYMENT_BUTTON = os.getenv('MOCK_PAYMENT_BUTTON', 'False').lower() == 'true'
 DADATA_API_TOKEN = "a1692950cea356040f39b7ff8dfb33b0642c0472"
 DADATA_BASE_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
 
