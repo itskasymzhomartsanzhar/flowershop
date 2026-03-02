@@ -210,7 +210,9 @@ def build_receipt(phone, amount_value):
                     "value": amount_value,
                     "currency": "RUB"
                 },
-                "vat_code": 1
+                "vat_code": 1,
+                "payment_subject": "commodity",
+                "payment_mode": "full_payment"
             }
         ],
         "tax_system_code": tax_system_code
