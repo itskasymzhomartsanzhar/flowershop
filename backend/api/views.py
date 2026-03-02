@@ -196,6 +196,27 @@ def normalize_payment_status(status_value):
     return mapping.get((status_value or "").lower(), PaymentSession.StatusEnum.PENDING)
 
 
+def build_receipt(phone, amount_value):
+    tax_system_code = getattr(settings, 'YOOKASSA_TAX_SYSTEM_CODE', 1)
+    return {
+        "customer": {
+            "phone": phone
+        },
+        "items": [
+            {
+                "description": "Заказ Flower Shop",
+                "quantity": "1.00",
+                "amount": {
+                    "value": amount_value,
+                    "currency": "RUB"
+                },
+                "vat_code": 1
+            }
+        ],
+        "tax_system_code": tax_system_code
+    }
+
+
 def build_payment_status_text(payment_session):
     order_number = payment_session.order.track_code if payment_session.order_id else payment_session.payment_id[:8].upper()
     delivery_mode = "Самовывоз" if payment_session.is_pickup else "Доставка"
@@ -899,6 +920,7 @@ class UsersViewSet(viewsets.ModelViewSet):
                 summary=summary,
                 promocode=promocode,
             )
+            receipt = build_receipt(phone, amount_value)
             payment = Payment.create({
                 "amount": {
                     "value": amount_value,
@@ -908,6 +930,7 @@ class UsersViewSet(viewsets.ModelViewSet):
                     "type": "redirect",
                     "return_url": PAYMENT_RETURN_URL
                 },
+                "receipt": receipt,
                 "capture": True,
                 "description": f"Заказ от пользователя",
                 "metadata": yookassa_metadata
