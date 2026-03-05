@@ -1551,11 +1551,18 @@ class ReviewViewSet(viewsets.ModelViewSet):
 @permission_classes([])
 def yookassa_webhook(request):
     _dispatch_due_payment_reminders(limit=10)
-    payment_object = request.data.get('object', {}) if isinstance(request.data, dict) else {}
-    payment_id = payment_object.get('id') or request.data.get('payment_id') if isinstance(request.data, dict) else None
+    payload = request.data if isinstance(request.data, dict) else {}
+    if not payload and request.body:
+        try:
+            payload = json.loads(request.body.decode('utf-8'))
+        except Exception:
+            payload = {}
+
+    payment_object = payload.get('object', {}) if isinstance(payload, dict) else {}
+    payment_id = payment_object.get('id') or (payload.get('payment_id') if isinstance(payload, dict) else None)
 
     if not payment_id:
-        print("YOOKASSA_WEBHOOK_BAD_REQUEST", {"data": request.data})
+        print("YOOKASSA_WEBHOOK_BAD_REQUEST", {"data": payload, "raw": request.body[:200]})
         return Response({'ok': False, 'error': 'missing payment id'}, status=400)
 
     payment_session = PaymentSession.objects.filter(payment_id=payment_id).select_related('order').first()
@@ -1566,11 +1573,11 @@ def yookassa_webhook(request):
         payment = Payment.find_one(payment_id)
         sync_payment_session_status(payment_session, payment.status)
     except Exception:
-        status_value = payment_object.get('status')
+        status_value = payment_object.get('status') if isinstance(payment_object, dict) else None
         if status_value:
             sync_payment_session_status(payment_session, status_value)
         else:
-            print("YOOKASSA_WEBHOOK_PROCESS_ERROR", {"payment_id": payment_id, "data": request.data})
+            print("YOOKASSA_WEBHOOK_PROCESS_ERROR", {"payment_id": payment_id, "data": payload})
             return Response({'ok': False}, status=400)
 
     return Response({'ok': True}, status=200)
