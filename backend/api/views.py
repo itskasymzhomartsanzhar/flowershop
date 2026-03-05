@@ -110,9 +110,12 @@ def send_telegram_status_message(tg_id, text):
     try:
         response = requests.post(_telegram_api_url("sendMessage"), json=payload, timeout=10)
         data = response.json()
-        return response.status_code == 200 and data.get("ok")
+        if response.status_code == 200 and data.get("ok"):
+            message = data.get("result", {})
+            return True, message.get("message_id")
     except Exception:
-        return False
+        return False, None
+    return False, None
 
 
 def _normalize_phone(value):
@@ -349,7 +352,7 @@ def _try_send_payment_reminder(payment_session_id, check_due=True):
 
         reminder_settings = _get_payment_reminder_settings()
         reminder_text = _build_payment_reminder_text(session, reminder_settings['message_text'])
-        sent = send_telegram_status_message(session.telegram_chat_id, reminder_text)
+        sent, _ = send_telegram_status_message(session.telegram_chat_id, reminder_text)
         if not sent:
             return False
 
@@ -485,6 +488,13 @@ def sync_payment_session_status(payment_session, yookassa_status):
                 payment_session.save(update_fields=['assemblers_notified_at', 'updated_at'])
 
     status_text = build_payment_status_text(payment_session)
+    if not payment_session.telegram_message_id:
+        sent, message_id = send_telegram_status_message(payment_session.telegram_chat_id, status_text)
+        if sent and message_id:
+            payment_session.telegram_message_id = message_id
+            payment_session.save(update_fields=['telegram_message_id', 'updated_at'])
+        return payment_session
+
     edited = edit_telegram_payment_message(payment_session.telegram_chat_id, payment_session.telegram_message_id, status_text)
     print("TELEGRAM_PAYMENT_EDIT", {
         "payment_id": payment_session.payment_id,
@@ -493,12 +503,15 @@ def sync_payment_session_status(payment_session, yookassa_status):
         "edited": edited
     })
     if not edited:
-        sent = send_telegram_status_message(payment_session.telegram_chat_id, status_text)
+        sent, message_id = send_telegram_status_message(payment_session.telegram_chat_id, status_text)
         print("TELEGRAM_PAYMENT_STATUS_SENT", {
             "payment_id": payment_session.payment_id,
             "chat_id": payment_session.telegram_chat_id,
             "sent": sent
         })
+        if sent and message_id:
+            payment_session.telegram_message_id = message_id
+            payment_session.save(update_fields=['telegram_message_id', 'updated_at'])
 
     return payment_session
 
