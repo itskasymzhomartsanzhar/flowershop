@@ -128,10 +128,14 @@ def _normalize_phone(value):
 
 
 def _format_recipient_block(is_recipient_self, user, recipient_name, recipient_phone):
+    payer_name = user.name or (f'@{user.telegram_username}' if user.telegram_username else str(user.tg_id))
+    payer_phone = _normalize_phone(recipient_phone)
     if is_recipient_self:
-        fallback_name = user.name or (f'@{user.telegram_username}' if user.telegram_username else str(user.tg_id))
-        return f"Заказчик и получатель: <b>{fallback_name}</b>, <b>{_normalize_phone(recipient_phone) or 'не указан'}</b>"
-    return f"Получатель: <b>{recipient_name}</b>, <b>{_normalize_phone(recipient_phone) or 'не указан'}</b>"
+        return f"Заказчик и получатель: <b>{payer_name}</b>, <b>{payer_phone or 'не указан'}</b>"
+    return (
+        f"Заказчик: <b>{payer_name}</b>, <b>{payer_phone or 'не указан'}</b>\n"
+        f"Получатель: <b>{recipient_name}</b>, <b>{_normalize_phone(recipient_phone) or 'не указан'}</b>"
+    )
 
 
 def send_assemblers_order_message(chat_id, text, reply_markup=None):
@@ -182,6 +186,8 @@ def build_assemblers_order_text(payment_session):
         items_lines.append(f"• {item_name} x{qty} = {line_total} ₽")
     items_block = '\n'.join(items_lines) if items_lines else '• Состав заказа недоступен'
     status_label = get_status_label(getattr(payment_session.order, 'status', None))
+    promo_line = f"Промокод: <b>{payment_session.promocode}</b>\n" if payment_session.promocode else ""
+    comment_line = f"Комментарий: <b>{payment_session.comment}</b>\n" if payment_session.comment else ""
     return (
         f"Заказ: <b>#{order_number}</b>\n"
         f"Статус: <b>{status_label}</b>\n"
@@ -191,7 +197,8 @@ def build_assemblers_order_text(payment_session):
         f"Адрес: <b>{address_text}</b>\n"
         f"Контакт заказчика: <b>{_normalize_phone(payment_session.phone) or 'не указан'}</b>\n"
         f"{recipient_block}\n"
-        f"Комментарий: <b>{payment_session.comment or 'нет'}</b>\n\n"
+        f"{promo_line}"
+        f"{comment_line}\n"
         f"Состав:\n{items_block}"
     )
 
@@ -438,6 +445,10 @@ def ensure_order_for_payment_session(payment_session):
         delivery_time_slot=locked_session.delivery_time_slot or None,
         photo=first_photo if first_photo else None,
         delivery_address=locked_session.address,
+        payer_name=locked_session.user.name or locked_session.user.telegram_username or str(locked_session.user.tg_id),
+        payer_phone=_normalize_phone(locked_session.phone) or '',
+        comment=locked_session.comment or '',
+        promocode=locked_session.promocode or '',
     )
 
     for good in goods_data:

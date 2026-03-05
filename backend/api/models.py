@@ -295,6 +295,10 @@ class Orders(models.Model):
     recipient_phone = models.CharField('Телефон получателя', max_length=64, blank=True)
     delivery_date = models.DateField('Дата доставки', null=True, blank=True)
     delivery_time_slot = models.CharField('Временной слот доставки', max_length=32, null=True, blank=True)
+    payer_name = models.CharField('Имя заказчика', max_length=255, blank=True)
+    payer_phone = models.CharField('Телефон заказчика', max_length=64, blank=True)
+    comment = models.TextField('Комментарий', blank=True)
+    promocode = models.CharField('Промокод', max_length=100, blank=True)
     staff_chat_id = models.BigIntegerField('Чат персонала', null=True, blank=True)
     staff_message_id = models.BigIntegerField('Сообщение персонала', null=True, blank=True)
 

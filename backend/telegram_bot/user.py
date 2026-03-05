@@ -125,14 +125,27 @@ async def handle_staff_order_action(callback_query, bot: Bot):
         delivery_mode = "Самовывоз" if order.is_pickup else "Доставка"
         address = "Самовывоз" if order.is_pickup else (order.delivery_address or "Не указан")
         delivery_dt = f"{order.delivery_date} {order.delivery_time_slot}".strip() if order.delivery_date else "Как можно скорее"
-        recipient_name = order.recipient_name or order.user.name or order.user.telegram_username or str(order.user.tg_id)
-        recipient_phone = order.recipient_phone or ""
+        payer_name = order.payer_name or order.user.name or order.user.telegram_username or str(order.user.tg_id)
+        payer_phone = order.payer_phone or ""
+        recipient_name = order.recipient_name or payer_name
+        recipient_phone = order.recipient_phone or payer_phone
         status_label = get_status_label(order.status)
 
         items = []
         for item in order.order_items.all():
             items.append(f"{item.product.name} x{item.quantity} = {int(item.price) * int(item.quantity)} ₽")
         items_block = "\n".join(items) if items else "Состав заказа недоступен"
+
+        if order.is_recipient_self:
+            recipient_block = f"Заказчик и получатель: <b>{payer_name}</b>, <b>{payer_phone or 'не указан'}</b>\n"
+        else:
+            recipient_block = (
+                f"Заказчик: <b>{payer_name}</b>, <b>{payer_phone or 'не указан'}</b>\n"
+                f"Получатель: <b>{recipient_name}</b>, <b>{recipient_phone or 'не указан'}</b>\n"
+            )
+
+        promo_line = f"Промокод: <b>{order.promocode}</b>\n" if order.promocode else ""
+        comment_line = f"Комментарий: <b>{order.comment}</b>\n" if order.comment else ""
 
         return (
             f"Заказ: <b>#{order.track_code}</b>\n"
@@ -141,7 +154,9 @@ async def handle_staff_order_action(callback_query, bot: Bot):
             f"Формат: <b>{delivery_mode}</b>\n"
             f"Время: <b>{delivery_dt}</b>\n"
             f"Адрес: <b>{address}</b>\n"
-            f"Получатель: <b>{recipient_name}</b>, <b>{recipient_phone or 'не указан'}</b>\n\n"
+            f"{recipient_block}"
+            f"{promo_line}"
+            f"{comment_line}\n"
             f"Состав:\n{items_block}"
         )
 
