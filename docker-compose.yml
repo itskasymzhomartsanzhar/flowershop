@@ -35,7 +35,7 @@ services:
       ALLOWED_HOSTS: "localhost,127.0.0.1,flowershop.swifttest.ru,flowershop_backend"
       SECRET_KEY: CHANGE_ME
       BOT_TOKEN: 7898807263:AAEVGakrVXbQxLXE7jeMTThmruE0ZXz9RBE
-      ORDER_ASSEMBLERS_CHAT_ID: "YOUR_STAFF_CHAT_ID"
+      ORDER_ASSEMBLERS_CHAT_ID: "-5162343685"
       YOOKASSA_ACCOUNT_ID: "1292132"
       YOOKASSA_SECRET_KEY: "test_MAbHrbNpehOKJLS3GtqLaSs1GakDy50PVkguR41uAZk"
       PAYMENT_RETURN_URL: "https://flowershop.swifttest.ru/"
@@ -60,7 +60,7 @@ services:
     environment:
       BOT_TOKEN: 7898807263:AAEVGakrVXbQxLXE7jeMTThmruE0ZXz9RBE
       REDIS_URL: redis://redis:6379/0
-      ORDER_ASSEMBLERS_CHAT_ID: "YOUR_STAFF_CHAT_ID"
+      ORDER_ASSEMBLERS_CHAT_ID: "-5162343685"
     depends_on:
       redis:
         condition: service_healthy
