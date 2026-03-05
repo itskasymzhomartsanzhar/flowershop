@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from .models import Users, Product, Category, Orders, Poster, Favorites, Review, Promocode, UsedPromocode, OrderItem, ServiceFeeSettings, PaymentSession, DeliverySettings, DeliveryTimeSlot, PaymentReminderSettings
+from .order_flow import build_staff_keyboard, get_status_label
 import requests
 import random
 from urllib.parse import quote
@@ -130,21 +131,26 @@ def _format_recipient_block(is_recipient_self, user, recipient_name, recipient_p
     return f"Получатель: <b>{recipient_name}</b>, <b>{_normalize_phone(recipient_phone) or 'не указан'}</b>"
 
 
-def send_assemblers_order_message(chat_id, text):
+def send_assemblers_order_message(chat_id, text, reply_markup=None):
     if not chat_id:
-        return False
+        return False, None
     payload = {
         "chat_id": int(chat_id),
         "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": True
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
     try:
         response = requests.post(_telegram_api_url("sendMessage"), json=payload, timeout=10)
         data = response.json()
-        return response.status_code == 200 and data.get("ok")
+        if response.status_code == 200 and data.get("ok"):
+            message = data.get("result", {})
+            return True, message.get("message_id")
     except Exception:
-        return False
+        return False, None
+    return False, None
 
 
 def build_assemblers_order_text(payment_session):
@@ -172,9 +178,10 @@ def build_assemblers_order_text(payment_session):
             line_total = 0
         items_lines.append(f"• {item_name} x{qty} = {line_total} ₽")
     items_block = '\n'.join(items_lines) if items_lines else '• Состав заказа недоступен'
+    status_label = get_status_label(getattr(payment_session.order, 'status', None))
     return (
-        f"🆕 Новый оплаченный заказ\n"
         f"Заказ: <b>#{order_number}</b>\n"
+        f"Статус: <b>{status_label}</b>\n"
         f"Сумма: <b>{payment_session.amount} ₽</b>\n"
         f"Формат: <b>{delivery_mode}</b>\n"
         f"Время: <b>{delivery_dt}</b>\n"
@@ -418,7 +425,7 @@ def ensure_order_for_payment_session(payment_session):
         name=first_product or f"Заказ от {locked_session.user.name or locked_session.user.telegram_username}",
         track_code=track_code,
         price=int(Decimal(str(locked_session.amount)).quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
-        status=Orders.StatusEnum.PAID,
+        status=Orders.StatusEnum.PLACED,
         isreturn=False,
         is_pickup=locked_session.is_pickup,
         is_recipient_self=locked_session.is_recipient_self,
@@ -464,9 +471,17 @@ def sync_payment_session_status(payment_session, yookassa_status):
         ensure_order_for_payment_session(payment_session)
         payment_session.refresh_from_db()
         if ORDER_ASSEMBLERS_CHAT_ID and not payment_session.assemblers_notified_at:
-            sent = send_assemblers_order_message(ORDER_ASSEMBLERS_CHAT_ID, build_assemblers_order_text(payment_session))
+            staff_keyboard = build_staff_keyboard(payment_session.order)
+            sent, message_id = send_assemblers_order_message(
+                ORDER_ASSEMBLERS_CHAT_ID,
+                build_assemblers_order_text(payment_session),
+                reply_markup=staff_keyboard
+            )
             if sent:
                 payment_session.assemblers_notified_at = timezone.now()
+                payment_session.order.staff_chat_id = int(ORDER_ASSEMBLERS_CHAT_ID)
+                payment_session.order.staff_message_id = message_id
+                payment_session.order.save(update_fields=['staff_chat_id', 'staff_message_id'])
                 payment_session.save(update_fields=['assemblers_notified_at', 'updated_at'])
 
     status_text = build_payment_status_text(payment_session)
@@ -1454,7 +1469,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         if not order_id or not text:
             return Response({'error': 'Missing required fields'}, status=400)
 
-        order = get_object_or_404(Orders, id=order_id, user=user, status='DELIVERED')
+        order = get_object_or_404(Orders, id=order_id, user=user, status__in=['DELIVERED', 'ISSUED'])
 
         from .models import OrderItem
 

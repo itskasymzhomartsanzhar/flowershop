@@ -32,7 +32,10 @@ from django.db.models import Q
 from datetime import datetime, timedelta
 from django.db.models import Count, Min, OuterRef, Prefetch, Q, Subquery, Max
 from django.core.exceptions import ObjectDoesNotExist
-from api.models import Users, Product, Orders
+from api.models import Users, Product, Orders, OrderItem
+from api.order_flow import build_staff_keyboard, get_next_status, get_status_label
+from django.db import transaction
+from django.utils import timezone
 import requests
 import aiohttp
 import json
@@ -88,4 +91,94 @@ async def start_message(message: Message, bot: Bot, command: CommandObject, stat
         "👋 Привет! Это интернет-магазин Flower Shop\n\n"
     )
     await message.answer(text, reply_markup=kb.web_app_button('https://flowershop.swifttest.ru'))
+
+
+@user_router.callback_query(lambda c: c.data and c.data.startswith('order:'))
+async def handle_staff_order_action(callback_query, bot: Bot):
+    staff_chat_id = getenv('ORDER_ASSEMBLERS_CHAT_ID', '')
+    if not staff_chat_id:
+        await callback_query.answer('Доступ запрещен', show_alert=True)
+        return
+    try:
+        staff_chat_id_int = int(staff_chat_id)
+    except ValueError:
+        await callback_query.answer('Доступ запрещен', show_alert=True)
+        return
+
+    if callback_query.message.chat.id != staff_chat_id_int:
+        await callback_query.answer('Доступ запрещен', show_alert=True)
+        return
+
+    parts = callback_query.data.split(':', 2)
+    if len(parts) != 3:
+        await callback_query.answer('Недоступно', show_alert=True)
+        return
+
+    _, order_id_raw, target_status = parts
+    try:
+        order_id = int(order_id_raw)
+    except ValueError:
+        await callback_query.answer('Недоступно', show_alert=True)
+        return
+
+    def _build_staff_text(order):
+        delivery_mode = "Самовывоз" if order.is_pickup else "Доставка"
+        address = "Самовывоз" if order.is_pickup else (order.delivery_address or "Не указан")
+        delivery_dt = f"{order.delivery_date} {order.delivery_time_slot}".strip() if order.delivery_date else "Как можно скорее"
+        recipient_name = order.recipient_name or order.user.name or order.user.telegram_username or str(order.user.tg_id)
+        recipient_phone = order.recipient_phone or ""
+        status_label = get_status_label(order.status)
+
+        items = []
+        for item in order.order_items.all():
+            items.append(f"{item.product.name} x{item.quantity} = {int(item.price) * int(item.quantity)} ₽")
+        items_block = "\n".join(items) if items else "Состав заказа недоступен"
+
+        return (
+            f"Заказ: <b>#{order.track_code}</b>\n"
+            f"Статус: <b>{status_label}</b>\n"
+            f"Сумма: <b>{order.price} ₽</b>\n"
+            f"Формат: <b>{delivery_mode}</b>\n"
+            f"Время: <b>{delivery_dt}</b>\n"
+            f"Адрес: <b>{address}</b>\n"
+            f"Получатель: <b>{recipient_name}</b>, <b>{recipient_phone or 'не указан'}</b>\n\n"
+            f"Состав:\n{items_block}"
+        )
+
+    def _advance_status():
+        with transaction.atomic():
+            order = Orders.objects.select_for_update().select_related('user').prefetch_related('order_items__product').filter(id=order_id).first()
+            if not order:
+                return None, 'Заказ не найден'
+            expected = get_next_status(order)
+            if not expected or expected != target_status:
+                return order, 'Недоступно'
+            updated = Orders.objects.filter(id=order.id, status=order.status).update(
+                status=target_status
+            )
+            if not updated:
+                return order, 'Уже обработано'
+            order.refresh_from_db()
+            order = Orders.objects.select_related('user').prefetch_related('order_items__product').get(id=order.id)
+            return order, None
+
+    order, error = await sync_to_async(_advance_status)()
+    if error:
+        await callback_query.answer(error, show_alert=True)
+        return
+
+    staff_keyboard = build_staff_keyboard(order)
+    text = _build_staff_text(order)
+    try:
+        await bot.edit_message_text(
+            text=text,
+            chat_id=callback_query.message.chat.id,
+            message_id=callback_query.message.message_id,
+            parse_mode=ParseMode.HTML,
+            reply_markup=staff_keyboard
+        )
+    except Exception:
+        pass
+
+    await callback_query.answer('Ок')
 

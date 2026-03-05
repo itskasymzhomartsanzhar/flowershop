@@ -269,6 +269,13 @@ class Favorites(models.Model):
 
 class Orders(models.Model):
     class StatusEnum(models.TextChoices):
+        PLACED = 'PLACED', _('Оформление')
+        ASSEMBLING_STARTED = 'ASSEMBLING_STARTED', _('Сборка начата')
+        ASSEMBLING_DONE = 'ASSEMBLING_DONE', _('Сборка готова')
+        COURIER_PICKED = 'COURIER_PICKED', _('Курьер забрал')
+        DELIVERING = 'DELIVERING', _('Доставка')
+        READY_FOR_PICKUP = 'READY_FOR_PICKUP', _('Готов к выдаче')
+        ISSUED = 'ISSUED', _('Выдан')
         PAID = 'PAID', _('Оплачен')
         ASSEMBLING = 'ASSEMBLING', _('Собирается ')
         ONTHEWAY = 'ONTHEWAY', _('В пути')
@@ -288,6 +295,8 @@ class Orders(models.Model):
     recipient_phone = models.CharField('Телефон получателя', max_length=64, blank=True)
     delivery_date = models.DateField('Дата доставки', null=True, blank=True)
     delivery_time_slot = models.CharField('Временной слот доставки', max_length=32, null=True, blank=True)
+    staff_chat_id = models.BigIntegerField('Чат персонала', null=True, blank=True)
+    staff_message_id = models.BigIntegerField('Сообщение персонала', null=True, blank=True)
 
     # Связь многие-ко-многим с продуктами через промежуточную модель
     products = models.ManyToManyField(Product, through='OrderItem', related_name='orders')
