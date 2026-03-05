@@ -88,7 +88,11 @@ async def start_message(message: Message, bot: Bot, command: CommandObject, stat
     )
 
     text = (
-        "👋 Привет! Это интернет-магазин Flower Shop\n\n"
+        "Рады видеть Вас в нашем сервисе CРЕЗ!\n\n"
+        "Наша цель:\n"
+        " - сделать цветы доступными\n"
+        " - мы хотим чтобы наши клиенты в центр ставили цветы, а не упаковку\n\n"
+        "Чтобы приступить к покупкам, перейдите в \"Каталог\""
     )
     await message.answer(text, reply_markup=kb.web_app_button('https://flowershop.swifttest.ru'))
 
