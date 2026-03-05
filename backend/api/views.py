@@ -486,8 +486,19 @@ def sync_payment_session_status(payment_session, yookassa_status):
 
     status_text = build_payment_status_text(payment_session)
     edited = edit_telegram_payment_message(payment_session.telegram_chat_id, payment_session.telegram_message_id, status_text)
+    print("TELEGRAM_PAYMENT_EDIT", {
+        "payment_id": payment_session.payment_id,
+        "chat_id": payment_session.telegram_chat_id,
+        "message_id": payment_session.telegram_message_id,
+        "edited": edited
+    })
     if not edited:
-        send_telegram_status_message(payment_session.telegram_chat_id, status_text)
+        sent = send_telegram_status_message(payment_session.telegram_chat_id, status_text)
+        print("TELEGRAM_PAYMENT_STATUS_SENT", {
+            "payment_id": payment_session.payment_id,
+            "chat_id": payment_session.telegram_chat_id,
+            "sent": sent
+        })
 
     return payment_session
 
