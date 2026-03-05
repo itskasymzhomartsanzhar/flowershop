@@ -1558,6 +1558,8 @@ def yookassa_webhook(request):
         except Exception:
             payload = {}
 
+    print("YOOKASSA_WEBHOOK_RECEIVED", {"content_type": request.content_type, "data": payload, "raw": request.body[:200]})
+
     payment_object = payload.get('object', {}) if isinstance(payload, dict) else {}
     payment_id = payment_object.get('id') or (payload.get('payment_id') if isinstance(payload, dict) else None)
 
