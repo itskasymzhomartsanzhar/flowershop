@@ -1578,15 +1578,18 @@ def yookassa_webhook(request):
 
     payment_session = PaymentSession.objects.filter(payment_id=payment_id).select_related('order').first()
     if not payment_session:
+        print("YOOKASSA_WEBHOOK_PAYMENT_SESSION_NOT_FOUND", {"payment_id": payment_id})
         return Response({'ok': True}, status=200)
 
     try:
         payment = Payment.find_one(payment_id)
         sync_payment_session_status(payment_session, payment.status)
+        print("YOOKASSA_WEBHOOK_SYNCED", {"payment_id": payment_id, "status": payment.status})
     except Exception:
         status_value = payment_object.get('status') if isinstance(payment_object, dict) else None
         if status_value:
             sync_payment_session_status(payment_session, status_value)
+            print("YOOKASSA_WEBHOOK_SYNCED", {"payment_id": payment_id, "status": status_value})
         else:
             print("YOOKASSA_WEBHOOK_PROCESS_ERROR", {"payment_id": payment_id, "data": payload})
             return Response({'ok': False}, status=400)
