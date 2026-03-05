@@ -464,14 +464,14 @@ def ensure_order_for_payment_session(payment_session):
 
 def sync_payment_session_status(payment_session, yookassa_status):
     mapped_status = normalize_payment_status(yookassa_status)
-    should_notify = not payment_session.telegram_message_id
-    if payment_session.status == mapped_status and not (mapped_status == PaymentSession.StatusEnum.SUCCEEDED and not payment_session.order_id) and not should_notify:
-        return payment_session
+    status_changed = payment_session.status != mapped_status
+    needs_order = mapped_status == PaymentSession.StatusEnum.SUCCEEDED and not payment_session.order_id
 
-    payment_session.status = mapped_status
-    payment_session.save(update_fields=['status', 'updated_at'])
+    if status_changed:
+        payment_session.status = mapped_status
+        payment_session.save(update_fields=['status', 'updated_at'])
 
-    if mapped_status == PaymentSession.StatusEnum.SUCCEEDED:
+    if mapped_status == PaymentSession.StatusEnum.SUCCEEDED and needs_order:
         ensure_order_for_payment_session(payment_session)
         payment_session.refresh_from_db()
         if ORDER_ASSEMBLERS_CHAT_ID and not payment_session.assemblers_notified_at:
@@ -1620,6 +1620,7 @@ def yookassa_webhook(request):
         return Response({'ok': True}, status=200)
 
     try:
+        print(88)
         payment = Payment.find_one(payment_id)
         sync_payment_session_status(payment_session, payment.status)
         print("YOOKASSA_WEBHOOK_SYNCED", {"payment_id": payment_id, "status": payment.status})
