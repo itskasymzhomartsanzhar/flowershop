@@ -464,7 +464,8 @@ def ensure_order_for_payment_session(payment_session):
 
 def sync_payment_session_status(payment_session, yookassa_status):
     mapped_status = normalize_payment_status(yookassa_status)
-    if payment_session.status == mapped_status and not (mapped_status == PaymentSession.StatusEnum.SUCCEEDED and not payment_session.order_id):
+    should_notify = not payment_session.telegram_message_id
+    if payment_session.status == mapped_status and not (mapped_status == PaymentSession.StatusEnum.SUCCEEDED and not payment_session.order_id) and not should_notify:
         return payment_session
 
     payment_session.status = mapped_status
@@ -488,6 +489,12 @@ def sync_payment_session_status(payment_session, yookassa_status):
                 payment_session.save(update_fields=['assemblers_notified_at', 'updated_at'])
 
     status_text = build_payment_status_text(payment_session)
+    if not payment_session.telegram_chat_id:
+        print("TELEGRAM_PAYMENT_SKIP", {
+            "payment_id": payment_session.payment_id,
+            "reason": "missing_chat_id"
+        })
+        return payment_session
     if not payment_session.telegram_message_id:
         sent, message_id = send_telegram_status_message(payment_session.telegram_chat_id, status_text)
         if sent and message_id:
