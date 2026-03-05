@@ -1551,20 +1551,29 @@ class ReviewViewSet(viewsets.ModelViewSet):
 @permission_classes([])
 def yookassa_webhook(request):
     _dispatch_due_payment_reminders(limit=10)
-    payload = request.data if isinstance(request.data, dict) else {}
-    if not payload and request.body:
+    raw_body = b''
+    try:
+        raw_body = request._request.body
+    except Exception:
+        raw_body = b''
+
+    payload = {}
+    if raw_body:
         try:
-            payload = json.loads(request.body.decode('utf-8'))
+            payload = json.loads(raw_body.decode('utf-8'))
         except Exception:
             payload = {}
 
-    print("YOOKASSA_WEBHOOK_RECEIVED", {"content_type": request.content_type, "data": payload, "raw": request.body[:200]})
+    if not payload and isinstance(request.data, dict):
+        payload = request.data
+
+    print("YOOKASSA_WEBHOOK_RECEIVED", {"content_type": request.content_type, "data": payload, "raw": raw_body[:200]})
 
     payment_object = payload.get('object', {}) if isinstance(payload, dict) else {}
     payment_id = payment_object.get('id') or (payload.get('payment_id') if isinstance(payload, dict) else None)
 
     if not payment_id:
-        print("YOOKASSA_WEBHOOK_BAD_REQUEST", {"data": payload, "raw": request.body[:200]})
+        print("YOOKASSA_WEBHOOK_BAD_REQUEST", {"data": payload, "raw": raw_body[:200]})
         return Response({'ok': False, 'error': 'missing payment id'}, status=400)
 
     payment_session = PaymentSession.objects.filter(payment_id=payment_id).select_related('order').first()
