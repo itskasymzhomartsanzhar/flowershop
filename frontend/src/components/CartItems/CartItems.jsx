@@ -2,6 +2,7 @@ import './CartItems.scss';
 import { Link } from 'react-router-dom';
 import useCart from '../../hooks/useCart';
 import formatPrice from '../../utils/formatPrice';
+import { getMaxOrderableQuantity, isOutOfStock as isProductOutOfStock } from '../../utils/stock';
 
 const CartItems = () => {
   const { products, counts, increment, decrement, calculateTotalPrice, clearCart, summary } = useCart();
@@ -45,7 +46,13 @@ const CartItems = () => {
               <div className="cart__counter">
                 <button onClick={() => decrement(product.id)} className="cart__counter-btn">−</button>
                 <span className="cart__counter-value">{counts[product.id]}</span>
-                <button onClick={() => increment(product.id)} className="cart__counter-btn">+</button>
+                <button
+                  onClick={() => increment(product.id)}
+                  className="cart__counter-btn"
+                  disabled={isProductOutOfStock(product) || (Number.isFinite(getMaxOrderableQuantity(product)) && counts[product.id] >= getMaxOrderableQuantity(product))}
+                >
+                  +
+                </button>
               </div>
             </div>
           ))}

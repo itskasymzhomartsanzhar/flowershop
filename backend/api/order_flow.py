@@ -21,6 +21,7 @@ PICKUP_FLOW = [
 ]
 
 STATUS_LABELS = {
+    Orders.StatusEnum.PENDING_PAYMENT: "Ожидает оплаты",
     Orders.StatusEnum.PLACED: "Оформление",
     Orders.StatusEnum.ASSEMBLING_STARTED: "Сборка у флористов (взялись за заказ)",
     Orders.StatusEnum.ASSEMBLING_DONE: "Сборка у флористов (готова)",
@@ -53,6 +54,8 @@ def normalize_status(status: Optional[str]) -> str:
 
 def get_next_status(order: Orders) -> Optional[str]:
     current = normalize_status(order.status)
+    if current == Orders.StatusEnum.PENDING_PAYMENT:
+        return None
     flow = PICKUP_FLOW if order.is_pickup else DELIVERY_FLOW
     if current not in flow:
         return None

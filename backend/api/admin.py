@@ -12,6 +12,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib import messages
 from .models import Orders, OrderItem, Users, Product, Category, Review, Favorites, Promocode, UsedPromocode, Poster, ServiceFeeSettings, PaymentSession, DeliverySettings, DeliveryTimeSlot, PaymentReminderSettings
+from .notifications import send_order_status_notification
 # admin.py
 from django.utils.html import format_html
 
@@ -59,6 +60,11 @@ class OrdersAdmin(admin.ModelAdmin):
         if change and 'status' in form.changed_data:
             obj._status_changed = True
         super().save_model(request, obj, form, change)
+        if getattr(obj, "_status_changed", False):
+            try:
+                send_order_status_notification(obj)
+            except Exception:
+                pass
 
 
 @admin.register(OrderItem)

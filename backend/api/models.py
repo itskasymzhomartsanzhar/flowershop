@@ -269,6 +269,7 @@ class Favorites(models.Model):
 
 class Orders(models.Model):
     class StatusEnum(models.TextChoices):
+        PENDING_PAYMENT = 'PENDING_PAYMENT', _('Ожидает оплаты')
         PLACED = 'PLACED', _('Оформление')
         ASSEMBLING_STARTED = 'ASSEMBLING_STARTED', _('Сборка начата')
         ASSEMBLING_DONE = 'ASSEMBLING_DONE', _('Сборка готова')

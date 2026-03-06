@@ -4,18 +4,10 @@ import getTelegramHeaders from '../../utils/telegramHeaders';
 import API_ENDPOINTS, { API_BASE_URL } from '../../utils/api';
 import formatPrice from '../../utils/formatPrice';
 import { emitCartUpdated } from '../../utils/cartEvents';
+import { clampQuantityToStock, getQuantityStep, isOutOfStock as isProductOutOfStock } from '../../utils/stock';
 import './Product.scss';
 
-const getQuantityStep = (product) => Math.max(1, Number(product?.quantity_step || 1));
-
-const normalizeQuantityByStep = (quantity, step) => {
-  const parsed = Number(quantity);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return step;
-  }
-  const normalized = Math.floor(parsed / step) * step;
-  return Math.max(step, normalized);
-};
+const normalizeQuantityByStep = (product, quantity) => clampQuantityToStock(product, quantity);
 
 function similarity(a, b) {
   if (!a || !b) return 0;
@@ -81,8 +73,7 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
     setCatalogQuantities((prev) => {
       const next = {};
       products.forEach((product) => {
-        const step = getQuantityStep(product);
-        next[product.id] = normalizeQuantityByStep(prev[product.id], step);
+        next[product.id] = normalizeQuantityByStep(product, prev[product.id]);
       });
       return next;
     });
@@ -148,8 +139,8 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
 
   const handleAddToCart = async (product, quantity = 1, closeModal = true) => {
     const step = getQuantityStep(product);
-    const safeQuantity = normalizeQuantityByStep(quantity, step);
-    if (safeQuantity <= 0) {
+    const safeQuantity = normalizeQuantityByStep(product, quantity);
+    if (safeQuantity <= 0 || isProductOutOfStock(product)) {
       return false;
     }
 
@@ -180,8 +171,9 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
     event.stopPropagation();
     const step = getQuantityStep(product);
     setCatalogQuantities((prev) => {
-      const current = normalizeQuantityByStep(prev[product.id], step);
-      const nextValue = direction === 'inc' ? current + step : Math.max(step, current - step);
+      const current = normalizeQuantityByStep(product, prev[product.id]);
+      const nextValueRaw = direction === 'inc' ? current + step : Math.max(step, current - step);
+      const nextValue = normalizeQuantityByStep(product, nextValueRaw);
       return { ...prev, [product.id]: nextValue };
     });
   };
@@ -189,7 +181,10 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
   const quickAddToCart = async (product, event) => {
     event.stopPropagation();
     const step = getQuantityStep(product);
-    const quantity = normalizeQuantityByStep(catalogQuantities[product.id], step);
+    const quantity = normalizeQuantityByStep(product, catalogQuantities[product.id]);
+    if (quantity <= 0 || isProductOutOfStock(product)) {
+      return;
+    }
     setAddingIds((prev) => ({ ...prev, [product.id]: true }));
     await handleAddToCart(product, quantity, false);
     setAddingIds((prev) => ({ ...prev, [product.id]: false }));
@@ -200,8 +195,8 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
       <div className="catalog">
         {filteredProducts.map((product) => {
           const isFavorite = favorites.includes(product.id);
-          const isOutOfStock = product.in_stock === 0;
-          const selectedQuantity = normalizeQuantityByStep(catalogQuantities[product.id], getQuantityStep(product));
+          const isOutOfStock = isProductOutOfStock(product);
+          const selectedQuantity = normalizeQuantityByStep(product, catalogQuantities[product.id]);
           const isAdding = Boolean(addingIds[product.id]);
           const totalPrice = product.price * selectedQuantity;
 

@@ -34,6 +34,7 @@ from django.db.models import Count, Min, OuterRef, Prefetch, Q, Subquery, Max
 from django.core.exceptions import ObjectDoesNotExist
 from api.models import Users, Product, Orders, OrderItem
 from api.order_flow import build_staff_keyboard, get_next_status, get_status_label
+from api.notifications import send_order_status_notification
 from django.db import transaction
 from django.utils import timezone
 import requests
@@ -197,5 +198,9 @@ async def handle_staff_order_action(callback_query, bot: Bot):
     except Exception:
         pass
 
-    await callback_query.answer('Ок')
+    try:
+        await sync_to_async(send_order_status_notification)(order)
+    except Exception:
+        pass
 
+    await callback_query.answer('Ок')

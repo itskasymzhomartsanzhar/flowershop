@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import API_ENDPOINTS from '../utils/api';
 import getTelegramHeaders from '../utils/telegramHeaders';
 import { CART_UPDATED_EVENT, emitCartUpdated } from '../utils/cartEvents';
+import { clampQuantityToStock, getQuantityStep, isOutOfStock as isProductOutOfStock } from '../utils/stock';
 
 export const useCart = () => {
   const [products, setProducts] = useState([]);
@@ -86,8 +87,14 @@ export const useCart = () => {
   const increment = (id) => {
     setCounts((prev) => {
       const product = products.find((item) => item.id === id);
-      const step = Math.max(1, Number(product?.quantity_step || 1));
-      const newCount = (prev[id] || 0) + step;
+      if (!product || isProductOutOfStock(product)) {
+        return prev;
+      }
+      const step = getQuantityStep(product);
+      const newCount = clampQuantityToStock(product, (prev[id] || 0) + step);
+      if (!newCount || newCount === prev[id]) {
+        return prev;
+      }
       updateCartQuantity(id, newCount);
       return { ...prev, [id]: newCount };
     });
@@ -96,7 +103,7 @@ export const useCart = () => {
   const decrement = (id) => {
     setCounts((prev) => {
       const product = products.find((item) => item.id === id);
-      const step = Math.max(1, Number(product?.quantity_step || 1));
+      const step = getQuantityStep(product);
       const current = prev[id] || 1;
       const newCount = current - step;
 

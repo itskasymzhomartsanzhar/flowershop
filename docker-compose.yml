@@ -38,7 +38,7 @@ services:
       ORDER_ASSEMBLERS_CHAT_ID: "-5162343685"
       YOOKASSA_ACCOUNT_ID: "1274505"
       YOOKASSA_SECRET_KEY: "live_3qkU7NMTBPyJaNnDTIAaHLkwIO0912AzkhCxcJPAfWk"
-      PAYMENT_RETURN_URL: "https://flowershop.swifttest.ru/"
+      PAYMENT_RETURN_URL: "https://t.me/srezflowers_bot"
       MOCK_PAYMENT_BUTTON: "False"
     depends_on:
       redis:

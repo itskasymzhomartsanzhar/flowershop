@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from .models import Users, Product, Category, Orders, Poster, Favorites, Review, Promocode, UsedPromocode, OrderItem, ServiceFeeSettings, PaymentSession, DeliverySettings, DeliveryTimeSlot, PaymentReminderSettings
 from .order_flow import build_staff_keyboard, get_status_label
+from .notifications import send_order_status_notification
 import requests
 import random
 from urllib.parse import quote
@@ -473,6 +474,24 @@ def ensure_order_for_payment_session(payment_session):
     return order
 
 
+def finalize_order_after_payment(payment_session):
+    order = payment_session.order
+    if not order:
+        return
+    status_changed = False
+    if order.status == Orders.StatusEnum.PENDING_PAYMENT:
+        updated = Orders.objects.filter(id=order.id, status=Orders.StatusEnum.PENDING_PAYMENT).update(
+            status=Orders.StatusEnum.PLACED
+        )
+        if updated:
+            order.status = Orders.StatusEnum.PLACED
+            status_changed = True
+    mark_promocode_as_used_if_needed(payment_session.user, payment_session.promocode)
+    cache.delete(f"cart:{payment_session.user.tg_id}")
+    if status_changed:
+        send_order_status_notification(order)
+
+
 def sync_payment_session_status(payment_session, yookassa_status):
     mapped_status = normalize_payment_status(yookassa_status)
     status_changed = payment_session.status != mapped_status
@@ -482,9 +501,12 @@ def sync_payment_session_status(payment_session, yookassa_status):
         payment_session.status = mapped_status
         payment_session.save(update_fields=['status', 'updated_at'])
 
-    if mapped_status == PaymentSession.StatusEnum.SUCCEEDED and needs_order:
-        ensure_order_for_payment_session(payment_session)
-        payment_session.refresh_from_db()
+    if mapped_status == PaymentSession.StatusEnum.SUCCEEDED:
+        if needs_order:
+            ensure_order_for_payment_session(payment_session)
+            payment_session.refresh_from_db()
+        if payment_session.order_id:
+            finalize_order_after_payment(payment_session)
         if ORDER_ASSEMBLERS_CHAT_ID and not payment_session.assemblers_notified_at:
             staff_keyboard = build_staff_keyboard(payment_session.order)
             sent, message_id = send_assemblers_order_message(
@@ -609,6 +631,36 @@ class UsersViewSet(viewsets.ModelViewSet):
         return int(Decimal(value).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
 
     @staticmethod
+    def _resolve_tg_id(request):
+        tg_id = None
+        user_data = getattr(request, 'tg_user_data', None)
+        if isinstance(user_data, dict):
+            tg_id = user_data.get('tg_id')
+        if not tg_id:
+            tg_id = request.headers.get('X-Tg-Id')
+        if not tg_id and hasattr(request, 'data'):
+            tg_id = request.data.get('tg_id')
+        if not tg_id and hasattr(request, 'query_params'):
+            tg_id = request.query_params.get('tg_id')
+        return tg_id
+
+    @staticmethod
+    def _get_or_create_user(request, tg_id):
+        user = Users.objects.filter(tg_id=tg_id).first()
+        if user:
+            return user
+        user_data = getattr(request, 'tg_user_data', {}) if isinstance(getattr(request, 'tg_user_data', {}), dict) else {}
+        first_name = user_data.get('first_name') or ''
+        last_name = user_data.get('last_name') or ''
+        username = user_data.get('username') or ''
+        display_name = f"{first_name} {last_name}".strip() or username or f"User {tg_id}"
+        return Users.objects.create(
+            tg_id=tg_id,
+            name=display_name,
+            telegram_username=username,
+        )
+
+    @staticmethod
     def _to_bool(value):
         if isinstance(value, bool):
             return value
@@ -657,6 +709,29 @@ class UsersViewSet(viewsets.ModelViewSet):
     def _get_product_step(product):
         step = int(getattr(product, 'quantity_step', 1) or 1)
         return max(1, step)
+
+    @staticmethod
+    def _get_product_stock(product):
+        raw_value = getattr(product, 'in_stock', None)
+        if raw_value is None:
+            return None
+        try:
+            return int(raw_value)
+        except (TypeError, ValueError):
+            return None
+
+    def _normalize_quantity_to_stock(self, product, quantity):
+        step = self._get_product_step(product)
+        available = self._get_product_stock(product)
+        normalized_qty = (int(quantity) // step) * step
+        if normalized_qty <= 0:
+            return 0
+        if available is None:
+            return normalized_qty
+        if available < step:
+            return 0
+        max_allowed = (available // step) * step
+        return min(normalized_qty, max_allowed)
 
     def _get_delivery_settings(self):
         settings_obj = DeliverySettings.objects.first()
@@ -842,7 +917,7 @@ class UsersViewSet(viewsets.ModelViewSet):
                 continue
 
             step = self._get_product_step(product)
-            normalized_qty = (quantity // step) * step
+            normalized_qty = self._normalize_quantity_to_stock(product, quantity)
             if normalized_qty <= 0:
                 continue
 
@@ -892,6 +967,83 @@ class UsersViewSet(viewsets.ModelViewSet):
         }
         return {'cart': cart_items, 'summary': summary}
 
+    def _create_pending_order(self, user, cart_items, summary, is_pickup, is_recipient_self, recipient_name,
+                               recipient_phone, delivery_date_value, delivery_time_slot_value, address, phone,
+                               comment, promocode_text):
+        product_ids = [item['id'] for item in cart_items]
+        with transaction.atomic():
+            products = Product.objects.select_for_update().filter(id__in=product_ids)
+            product_map = {product.id: product for product in products}
+
+            for item in cart_items:
+                product = product_map.get(item['id'])
+                if not product:
+                    raise ValueError('Товар недоступен')
+                step = self._get_product_step(product)
+                available = self._get_product_stock(product)
+                if available is not None:
+                    if available < step:
+                        raise ValueError('Нет в наличии')
+                    if int(item['quantity']) > available:
+                        raise ValueError('Недостаточно на складе')
+
+            first_product = product_map.get(cart_items[0]['id']) if cart_items else None
+            track_code = f"{uuid.uuid4().hex[:8].upper()}"
+            order = Orders.objects.create(
+                user=user,
+                name=first_product.name if first_product else f"Заказ от {user.name or user.telegram_username}",
+                track_code=track_code,
+                price=int(Decimal(str(summary['total'])).quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
+                status=Orders.StatusEnum.PENDING_PAYMENT,
+                isreturn=False,
+                is_pickup=is_pickup,
+                is_recipient_self=is_recipient_self,
+                recipient_name=recipient_name,
+                recipient_phone=recipient_phone,
+                delivery_date=delivery_date_value,
+                delivery_time_slot=delivery_time_slot_value or None,
+                photo=first_product.photo1 if first_product else None,
+                delivery_address=address,
+                payer_name=user.name or user.telegram_username or str(user.tg_id),
+                payer_phone=_normalize_phone(phone) or '',
+                comment=comment or '',
+                promocode=promocode_text or '',
+            )
+
+            for item in cart_items:
+                product = product_map.get(item['id'])
+                if not product:
+                    continue
+                quantity = max(1, int(item['quantity']))
+                line_price = Decimal(str(item['price'])).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=quantity,
+                    price=line_price
+                )
+                available = self._get_product_stock(product)
+                if available is not None:
+                    product.in_stock = max(0, available - quantity)
+                    product.save(update_fields=['in_stock'])
+        return order
+
+    def _rollback_pending_order(self, order):
+        if not order:
+            return
+        with transaction.atomic():
+            items = list(OrderItem.objects.select_related('product').filter(order=order))
+            for item in items:
+                product = item.product
+                if product is None:
+                    continue
+                available = self._get_product_stock(product)
+                if available is not None:
+                    product.in_stock = available + int(item.quantity)
+                    product.save(update_fields=['in_stock'])
+            OrderItem.objects.filter(order=order).delete()
+            Orders.objects.filter(id=order.id).delete()
+
 
     @action(detail=False, methods=['post'])
     def create_payment(self, request):
@@ -908,7 +1060,10 @@ class UsersViewSet(viewsets.ModelViewSet):
         recipient_phone = self._validate_phone(data.get('recipient_phone'))
         delivery_date_raw = data.get('delivery_date')
         delivery_time_slot_raw = data.get('delivery_time_slot')
-        tg_id = str(self.request.tg_user_data.get('tg_id'))
+        tg_id = self._resolve_tg_id(request)
+        if not tg_id:
+            return Response({'error': 'tg_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        tg_id = str(tg_id)
         address = PICKUP_ADDRESS_PLACEHOLDER if is_pickup else raw_address
         delivery_date_value = None
         delivery_time_slot_value = ''
@@ -929,7 +1084,7 @@ class UsersViewSet(viewsets.ModelViewSet):
             if delivery_error:
                 return Response({'error': delivery_error}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = get_object_or_404(Users, tg_id=tg_id)
+        user = self._get_or_create_user(request, tg_id)
         promocode, discount_percent, promo_error = self._resolve_promocode(user, promocode_text)
         if promo_error:
             return Response({'error': promo_error}, status=status.HTTP_400_BAD_REQUEST)
@@ -951,6 +1106,28 @@ class UsersViewSet(viewsets.ModelViewSet):
             }
             for item in cart_items
         ]
+        order = None
+        try:
+            order = self._create_pending_order(
+                user=user,
+                cart_items=cart_items,
+                summary=summary,
+                is_pickup=is_pickup,
+                is_recipient_self=is_recipient_self,
+                recipient_name=recipient_name,
+                recipient_phone=recipient_phone,
+                delivery_date_value=delivery_date_value,
+                delivery_time_slot_value=delivery_time_slot_value,
+                address=address,
+                phone=phone,
+                comment=comment,
+                promocode_text=promocode.promocode if promocode else '',
+            )
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response({'error': 'Не удалось оформить заказ. Попробуйте снова.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         if getattr(settings, 'MOCK_PAYMENT_BUTTON', True):
             mock_payment_id = f"mock_{uuid.uuid4().hex[:12]}"
             mock_text = (
@@ -964,7 +1141,30 @@ class UsersViewSet(viewsets.ModelViewSet):
                 text=mock_text,
                 callback_data=f"mock_pay:{mock_payment_id}",
             )
+            if order:
+                PaymentSession.objects.create(
+                    payment_id=mock_payment_id,
+                    user=user,
+                    order=order,
+                    status=PaymentSession.StatusEnum.PENDING,
+                    amount=Decimal(summary['total']),
+                    phone=phone,
+                    address=address,
+                    is_pickup=is_pickup,
+                    is_recipient_self=is_recipient_self,
+                    recipient_name=recipient_name,
+                    recipient_phone=recipient_phone,
+                    delivery_date=delivery_date_value,
+                    delivery_time_slot=delivery_time_slot_value,
+                    comment=comment,
+                    promocode=promocode.promocode if promocode else '',
+                    goods=goods_metadata,
+                    summary=summary,
+                    confirmation_url='',
+                    telegram_chat_id=user.tg_id,
+                )
             if not sent:
+                self._rollback_pending_order(order)
                 return Response({'error': 'Не удалось отправить сообщение в Telegram. Попробуйте снова.'}, status=500)
             return Response({
                 "payment_id": mock_payment_id,
@@ -1002,15 +1202,18 @@ class UsersViewSet(viewsets.ModelViewSet):
                 "metadata": yookassa_metadata
             }, idempotence_key)
         except Exception as e:
+            self._rollback_pending_order(order)
             return Response({'error': f'Payment error: {str(e)}'}, status=500)
 
         confirmation_url = getattr(getattr(payment, 'confirmation', None), 'confirmation_url', None)
         if not confirmation_url:
+            self._rollback_pending_order(order)
             return Response({'error': 'Payment confirmation URL is missing'}, status=500)
 
         session = PaymentSession.objects.create(
             payment_id=payment.id,
             user=user,
+            order=order,
             status=normalize_payment_status(payment.status),
             amount=Decimal(amount_value),
             phone=phone,
@@ -1037,6 +1240,8 @@ class UsersViewSet(viewsets.ModelViewSet):
             session.save(update_fields=['telegram_message_id', 'updated_at'])
             _schedule_payment_reminder(session.id, _get_payment_reminder_settings()['delay_minutes'])
         else:
+            PaymentSession.objects.filter(id=session.id).delete()
+            self._rollback_pending_order(order)
             return Response({'error': 'Не удалось отправить ссылку в Telegram. Попробуйте снова.'}, status=500)
 
         return Response({
@@ -1133,6 +1338,13 @@ class UsersViewSet(viewsets.ModelViewSet):
 
         key = f'cart:{tg_id}'
         cart = cache.get(key, {})
+        available = self._get_product_stock(product)
+        if available is not None:
+            if available < step:
+                return Response({'error': 'Нет в наличии'}, status=400)
+            current_qty = int(cart.get(product_id, 0) or 0)
+            if current_qty + quantity > available:
+                return Response({'error': 'Недостаточно на складе'}, status=400)
 
         cart[product_id] = cart.get(product_id, 0) + quantity
 
@@ -1194,6 +1406,12 @@ class UsersViewSet(viewsets.ModelViewSet):
             step = self._get_product_step(product)
             if quantity % step != 0:
                 return Response({'error': f'Quantity must be a multiple of step ({step})'}, status=400)
+            available = self._get_product_stock(product)
+            if available is not None:
+                if available < step:
+                    return Response({'error': 'Нет в наличии'}, status=400)
+                if quantity > available:
+                    return Response({'error': 'Недостаточно на складе'}, status=400)
             cart[product_id] = quantity
 
         cache.set(key, cart, timeout=60 * 60 * 24 * 7)

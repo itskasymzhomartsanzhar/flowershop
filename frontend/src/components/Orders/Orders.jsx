@@ -50,18 +50,32 @@ const Orders = ({ onInitData }) => {
       .catch(err => {});
   };
 
-  const getStatusStages = (currentStatus) => {
-    const stages = [
-      { key: 'ASSEMBLING', label: 'Собирается' },
-      { key: 'ONTHEWAY', label: 'В пути' },
-      { key: 'ATTHEPOINT', label: 'В пути' },
-      { key: 'DELIVERED', label: 'Доставлено' }
-    ];
+  const getStatusStages = (order) => {
+    const currentStatus = order.status;
+    if (currentStatus === 'PENDING_PAYMENT') {
+      return [{ key: 'PENDING_PAYMENT', label: 'Ожидает оплаты', isActive: true, isCurrent: true }];
+    }
 
-    const statusOrder = ['ASSEMBLING', 'ONTHEWAY', 'ATTHEPOINT', 'DELIVERED'];
+    const stages = order.is_pickup
+      ? [
+          { key: 'PLACED', label: 'Оформление' },
+          { key: 'ASSEMBLING_STARTED', label: 'Сборка' },
+          { key: 'READY_FOR_PICKUP', label: 'В пункте выдачи' },
+          { key: 'ISSUED', label: 'Выдан' }
+        ]
+      : [
+          { key: 'PLACED', label: 'Оформление' },
+          { key: 'ASSEMBLING_STARTED', label: 'Сборка' },
+          { key: 'DELIVERING', label: 'В пути' },
+          { key: 'DELIVERED', label: 'Доставлен' }
+        ];
+
+    const statusOrder = stages.map((stage) => stage.key);
     const currentIndex = statusOrder.indexOf(currentStatus);
+    if (currentIndex === -1) {
+      return [{ key: 'PLACED', label: 'Оформление', isActive: true, isCurrent: true }];
+    }
 
-    // Если доставлено - показываем предыдущий и текущий
     if (currentIndex === stages.length - 1) {
       return [
         { ...stages[currentIndex - 1], isActive: true, isCurrent: false },
@@ -69,7 +83,6 @@ const Orders = ({ onInitData }) => {
       ];
     }
 
-    // Иначе показываем текущий и следующий
     return [
       { ...stages[currentIndex], isActive: true, isCurrent: true },
       { ...stages[currentIndex + 1], isActive: false, isCurrent: false }
@@ -93,7 +106,7 @@ const Orders = ({ onInitData }) => {
             </div>
 
             <div className="orders__timeline">
-              {getStatusStages(order.status).map((stage, index, array) => (
+              {getStatusStages(order).map((stage, index, array) => (
                 <div key={stage.key} className="orders__stage">
                   <div className={`orders__stage-item ${stage.isActive ? 'orders__stage-item--active' : ''} ${stage.isCurrent ? 'orders__stage-item--current' : ''}`}>
                     <div className="orders__stage-dot"></div>

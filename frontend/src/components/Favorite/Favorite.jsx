@@ -6,6 +6,7 @@ import './Favorite.scss';
 import formatPrice from '../../utils/formatPrice';
 import { emitCartUpdated } from '../../utils/cartEvents';
 import { Link, useLocation } from 'react-router-dom';
+import { clampQuantityToStock, isOutOfStock as isProductOutOfStock } from '../../utils/stock';
 
 const Favorite = () => {
   const [favorites, setFavorites] = useState([]);
@@ -47,6 +48,10 @@ const Favorite = () => {
   };
 
   const handleAddToCart = (product, quantity = 1) => {
+    const safeQuantity = clampQuantityToStock(product, quantity);
+    if (safeQuantity <= 0 || isProductOutOfStock(product)) {
+      return;
+    }
     fetch(API_ENDPOINTS.CART.ADD, {
       method: 'POST',
       headers: {
@@ -55,7 +60,7 @@ const Favorite = () => {
       },
       body: JSON.stringify({
         product_id: product.id,
-        quantity,
+        quantity: safeQuantity,
       }),
     })
       .then(res => res.json())
@@ -82,7 +87,7 @@ const Favorite = () => {
         <div className="catalog">
           {favorites.map((favorite) => {
             const product = favorite.product_info;
-            const isOutOfStock = product.in_stock === 0;
+            const isOutOfStock = isProductOutOfStock(product);
 
             return (
               <div

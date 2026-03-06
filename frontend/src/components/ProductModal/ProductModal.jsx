@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useCarousel from '../../hooks/useCarousel';
 import './ProductModal.scss';
 import formatPrice from '../../utils/formatPrice';
+import { clampQuantityToStock, getQuantityStep, isOutOfStock as isProductOutOfStock } from '../../utils/stock';
 
 const ProductModalCarousel = ({ product, onClose, onAddToCart, source = 'catalog' }) => {
   const photos = [];
@@ -11,10 +12,10 @@ const ProductModalCarousel = ({ product, onClose, onAddToCart, source = 'catalog
   }
 
   const [closing, setClosing] = useState(false);
-  const quantityStep = Math.max(1, Number(product.quantity_step || 1));
-  const [quantity, setQuantity] = useState(quantityStep);
+  const quantityStep = getQuantityStep(product);
+  const [quantity, setQuantity] = useState(() => clampQuantityToStock(product, quantityStep));
   const { slideIndex, carouselRef, goToSlide } = useCarousel(photos.length);
-  const isOutOfStock = product.in_stock === 0;
+  const isOutOfStock = isProductOutOfStock(product);
 
   const handleClose = () => setClosing(true);
   const onAnimationEnd = () => {
@@ -50,7 +51,7 @@ const handleAddToCart = () => {
   };
 
   const incrementQuantity = () => {
-    setQuantity((prev) => prev + quantityStep);
+    setQuantity((prev) => clampQuantityToStock(product, prev + quantityStep));
   };
 
   const decrementQuantity = () => {
