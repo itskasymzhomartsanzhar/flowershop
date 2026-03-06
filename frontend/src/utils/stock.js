@@ -35,7 +35,11 @@ export const isOutOfStock = (product) => {
 
 export const clampQuantityToStock = (product, quantity) => {
   const step = getQuantityStep(product);
-  const normalized = Math.floor(Number(quantity) / step) * step;
+  const parsed = Number(quantity);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return step;
+  }
+  const normalized = Math.floor(parsed / step) * step;
   const maxQty = getMaxOrderableQuantity(product);
   if (!Number.isFinite(maxQty)) {
     return Math.max(step, normalized);
