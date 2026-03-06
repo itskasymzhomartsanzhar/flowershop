@@ -5,7 +5,7 @@ import API_ENDPOINTS from '../../utils/api';
 import formatPrice from '../../utils/formatPrice';
 import './Confirm.scss';
 
-const PICKUP_ADDRESS = 'ул. Пушкина, дом 1';
+const PICKUP_ADDRESS = 'Краснодар, 40-летия победы 129/2';
 
 const Confirm = () => {
   const location = useLocation();
