@@ -3,7 +3,6 @@ import Navbar from '../components/Navbar/Navbar';
 import Tabs from '../components/Tabs/Tabs';
 import Product from '../components/Product/Product';
 import SearchOverlay from '../components/SearchOverlay/SearchOverlay';
-import Poster from '../components/Poster/Poster';
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState('Все');
@@ -33,9 +32,7 @@ const Home = () => {
         />
       )}
 
-      <Poster />
-
-      <Product activeTab={activeTab} searchQuery={searchQuery} filterState={filterState}/>
+<Product activeTab={activeTab} searchQuery={searchQuery} filterState={filterState}/>
     </>
   );
 };
