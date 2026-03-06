@@ -56,7 +56,7 @@ const CartItems = () => {
           <div className="cart__footer">
             {serviceFee > 0 && (
               <div className="cart__fee-row">
-                <span>Сервисный сбор ({serviceFeePercent}%)</span>
+                <span>Сервисный сбор ({serviceFeePercent}%) (за доставку и упаковку)</span>
                 <span>{formatPrice(serviceFee)}₽</span>
               </div>
             )}
