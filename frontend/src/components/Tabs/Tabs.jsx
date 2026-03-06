@@ -12,8 +12,6 @@ const Tabs = ({ activeTab, onTabChange, onFilterChange }) => {
       .then(data => {
         const staticCategories = [
           { id: -1, name: 'Все' },
-          { id: -2, name: 'Новинки' },
-          { id: -3, name: 'Популярные' },
         ];
 
         const allCategories = [...staticCategories, ...data];
