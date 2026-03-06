@@ -120,12 +120,14 @@ def send_telegram_status_message(tg_id, text):
 
 
 def _normalize_phone(value):
-    phone = ''.join(ch for ch in str(value or '') if ch.isdigit() or ch == '+').strip()
-    if phone.startswith('8'):
-        phone = f'+7{phone[1:]}'
-    if phone and not phone.startswith('+'):
-        phone = f'+{phone}'
-    return phone
+    digits = ''.join(ch for ch in str(value or '') if ch.isdigit())
+    if not digits:
+        return ''
+    if digits.startswith('8') and len(digits) == 11:
+        digits = '7' + digits[1:]
+    if len(digits) == 10:
+        digits = '7' + digits
+    return f'+{digits}'
 
 
 def _format_recipient_block(is_recipient_self, user, recipient_name, recipient_phone):
@@ -676,7 +678,7 @@ class UsersViewSet(viewsets.ModelViewSet):
     def _validate_phone(value):
         normalized = _normalize_phone(value)
         digits_count = len([ch for ch in normalized if ch.isdigit()])
-        if digits_count < 10 or digits_count > 15:
+        if digits_count < 11 or digits_count > 15:
             return None
         return normalized
 
