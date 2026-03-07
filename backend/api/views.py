@@ -130,6 +130,18 @@ def _normalize_phone(value):
     return f'+{digits}'
 
 
+def _absolute_media_url(request, file_field):
+    if not file_field:
+        return None
+    try:
+        url = request.build_absolute_uri(file_field.url)
+    except Exception:
+        return None
+    if getattr(settings, 'FORCE_HTTPS_MEDIA', False):
+        url = url.replace('http://', 'https://', 1)
+    return url
+
+
 def _format_recipient_block(is_recipient_self, user, recipient_name, recipient_phone):
     payer_name = user.name or (f'@{user.telegram_username}' if user.telegram_username else str(user.tg_id))
     payer_phone = _normalize_phone(recipient_phone)
@@ -949,7 +961,7 @@ class UsersViewSet(viewsets.ModelViewSet):
                 'id': product.id,
                 'name': product.name,
                 'price': unit_price,
-                'photo': request.build_absolute_uri(product.photo1.url) if product.photo1 else None,
+                'photo': _absolute_media_url(request, product.photo1),
                 'quantity': normalized_qty,
                 'quantity_step': step,
                 'line_total': line_total,

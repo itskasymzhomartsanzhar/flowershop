@@ -176,4 +176,4 @@ USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Temporary switch: force https in generated media URLs when needed in production
-FORCE_HTTPS_MEDIA = os.getenv('FORCE_HTTPS_MEDIA', 'False').lower() == 'true'
+FORCE_HTTPS_MEDIA = os.getenv('FORCE_HTTPS_MEDIA', 'True').lower() == 'true'
