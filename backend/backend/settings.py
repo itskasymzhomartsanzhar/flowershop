@@ -24,7 +24,7 @@ YOOKASSA_ACCOUNT_ID = os.getenv('YOOKASSA_ACCOUNT_ID', '1134900')
 YOOKASSA_SECRET_KEY = os.getenv('YOOKASSA_SECRET_KEY', 'test_KuPzb4yyMFfgEfEYnfJ4gWO8QQtFTzA6TSqCaK3LuAs')
 PAYMENT_RETURN_URL = os.getenv('PAYMENT_RETURN_URL', 'https://t.me/srezflowers_bot')
 YOOKASSA_TAX_SYSTEM_CODE = int(os.getenv('YOOKASSA_TAX_SYSTEM_CODE', '1'))
-ORDER_ASSEMBLERS_CHAT_ID = os.getenv('ORDER_ASSEMBLERS_CHAT_ID', '')
+ORDER_ASSEMBLERS_CHAT_ID = "-1003822871974"
 MOCK_PAYMENT_BUTTON = os.getenv('MOCK_PAYMENT_BUTTON', 'False').lower() == 'true'
 DADATA_API_TOKEN = "a1692950cea356040f39b7ff8dfb33b0642c0472"
 DADATA_BASE_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
