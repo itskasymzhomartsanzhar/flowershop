@@ -32,7 +32,7 @@ from django.db import transaction
 
 Configuration.account_id = getattr(settings, 'YOOKASSA_ACCOUNT_ID', '1134900')
 Configuration.secret_key = getattr(settings, 'YOOKASSA_SECRET_KEY', 'test_KuPzb4yyMFfgEfEYnfJ4gWO8QQtFTzA6TSqCaK3LuAs')
-PICKUP_ADDRESS_PLACEHOLDER = 'ул. Пушкина, дом 1'
+PICKUP_ADDRESS_PLACEHOLDER = 'Краснодар, 40-летия победы 129/2 (Может Быть Цветы)'
 PAYMENT_RETURN_URL = getattr(settings, 'PAYMENT_RETURN_URL', 'https://swiftstore.tw1.su/')
 ORDER_ASSEMBLERS_CHAT_ID = str(getattr(settings, 'ORDER_ASSEMBLERS_CHAT_ID', '') or '').strip()
 
