@@ -43,6 +43,7 @@ export const API_ENDPOINTS = {
   USERS: {
     PROFILE: `${API_BASE_URL}/users/profile/`,
     UPDATE_NOTIFICATIONS: `${API_BASE_URL}/users/update-notifications/`,
+    DELIVERY_TERMS: `${API_BASE_URL}/users/send-delivery-terms/`,
   },
   PAYMENT: {
     CREATE: `${API_BASE_URL}/users/create_payment/`,

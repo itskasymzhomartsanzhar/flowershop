@@ -628,6 +628,22 @@ class UsersViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(user)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['post'], url_path='send-delivery-terms')
+    def send_delivery_terms(self, request):
+        tg_id = self._resolve_tg_id(request)
+        if not tg_id:
+            return Response({'error': 'tg_id is required'}, status=400)
+        user = self._get_or_create_user(request, str(tg_id))
+        text = (
+            "Условия доставки🚚\n\n"
+            "Мы доставляем заказы по Краснодару собственными курьерами, чтобы контролировать качество сервиса и сохранить свежесть цветов до момента вручения.\n\n"
+            "В периоды высокой загрузки, когда количество заказов сильно увеличивается, мы можем привлекать курьерские службы-партнёры. Это позволяет не задерживать доставку и привозить заказы в запланированное время.\n\n"
+            "Доставка по Краснодару входит в сервисный сбор. В него также входит упаковка цветов и подготовка заказа к отправке.\n\n"
+            "Размер сервисного сбора составляет 15% от суммы заказа."
+        )
+        sent, _ = send_telegram_status_message(user.tg_id, text)
+        return Response({'ok': bool(sent)})
+
     @staticmethod
     def _round_money(value):
         return int(Decimal(value).quantize(Decimal('1'), rounding=ROUND_HALF_UP))

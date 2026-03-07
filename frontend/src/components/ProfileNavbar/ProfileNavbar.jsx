@@ -1,5 +1,7 @@
 import profileimg from '../../assets/profile.png';
 import './ProfileNavbar.scss';
+import API_ENDPOINTS from '../../utils/api';
+import getTelegramHeaders from '../../utils/telegramHeaders';
 
 const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
 
@@ -10,10 +12,10 @@ const photoUrl = tgUser?.photo_url || profileimg;
 const ProfileNavbar = () => {
   const handleDeliveryTerms = (event) => {
     event.preventDefault();
-    const tg = window.Telegram?.WebApp;
-    if (tg && typeof tg.sendData === 'function') {
-      tg.sendData('delivery_terms');
-    }
+    fetch(API_ENDPOINTS.USERS.DELIVERY_TERMS, {
+      method: 'POST',
+      headers: getTelegramHeaders(),
+    }).catch(() => {});
   };
 
   return (
