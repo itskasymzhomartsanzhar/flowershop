@@ -96,6 +96,21 @@ async def start_message(message: Message, bot: Bot, command: CommandObject, stat
     await message.answer(text, reply_markup=kb.web_app_button('https://flowershop.swifttest.ru'))
 
 
+@user_router.message(F.content_type == ContentType.WEB_APP_DATA)
+async def handle_web_app_data(message: Message):
+    data = (message.web_app_data.data or '').strip() if message.web_app_data else ''
+    if data != 'delivery_terms':
+        return
+    text = (
+        "Условия доставки🚚\n\n"
+        "Мы доставляем заказы по Краснодару собственными курьерами, чтобы контролировать качество сервиса и сохранить свежесть цветов до момента вручения.\n\n"
+        "В периоды высокой загрузки, когда количество заказов сильно увеличивается, мы можем привлекать курьерские службы-партнёры. Это позволяет не задерживать доставку и привозить заказы в запланированное время.\n\n"
+        "Доставка по Краснодару входит в сервисный сбор. В него также входит упаковка цветов и подготовка заказа к отправке.\n\n"
+        "Размер сервисного сбора составляет 15% от суммы заказа."
+    )
+    await message.answer(text)
+
+
 @user_router.callback_query(lambda c: c.data and c.data.startswith('order:'))
 async def handle_staff_order_action(callback_query, bot: Bot):
     staff_chat_id = getenv('ORDER_ASSEMBLERS_CHAT_ID', '')
