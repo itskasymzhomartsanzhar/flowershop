@@ -126,16 +126,24 @@ async def handle_web_app_data(message: Message):
 async def handle_staff_order_action(callback_query, bot: Bot):
     staff_chat_id = getenv('ORDER_ASSEMBLERS_CHAT_ID', '')
     if not staff_chat_id:
-        await callback_query.answer('Доступ запрещен', show_alert=True)
+        print("STAFF_CHAT_GUARD", {"reason": "missing_env"})
+        await callback_query.answer()
         return
     try:
         staff_chat_id_int = int(staff_chat_id)
     except ValueError:
-        await callback_query.answer('Доступ запрещен', show_alert=True)
+        print("STAFF_CHAT_GUARD", {"reason": "invalid_env", "value": staff_chat_id})
+        await callback_query.answer()
         return
 
     if callback_query.message.chat.id != staff_chat_id_int:
-        await callback_query.answer('Доступ запрещен', show_alert=True)
+        print("STAFF_CHAT_GUARD", {
+            "reason": "chat_mismatch",
+            "expected": staff_chat_id_int,
+            "actual": callback_query.message.chat.id,
+            "from": callback_query.from_user.id
+        })
+        await callback_query.answer()
         return
 
     parts = callback_query.data.split(':', 2)
