@@ -26,7 +26,7 @@ const Search = () => {
           }}
         />
 
-      <Product activeTab={activeTab} searchQuery={searchQuery} />
+      <Product key="search-catalog" activeTab={activeTab} searchQuery={searchQuery} />
     </>
   );
 };

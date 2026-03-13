@@ -32,7 +32,7 @@ const Home = () => {
         />
       )}
 
-<Product activeTab={activeTab} searchQuery={searchQuery} filterState={filterState}/>
+<Product key="home-catalog" activeTab={activeTab} searchQuery={searchQuery} filterState={filterState}/>
     </>
   );
 };

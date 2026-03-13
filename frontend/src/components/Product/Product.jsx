@@ -42,7 +42,7 @@ function similarity(a, b) {
   return (1 - distance / maxLen) * 100;
 }
 
-const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
+const Product = ({ activeTab, searchQuery = '', filterState = 0 }) => {
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [favorites, setFavorites] = useState([]);
@@ -56,7 +56,7 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
   useEffect(() => {
     let url = `${API_BASE_URL}/product/`;
     if (filterState === 0) {
-      url = `${API_BASE_URL}/product/recommended/`;
+      url = `${API_BASE_URL}/product/`;
     } else if (filterState === 1) {
       url = `${API_BASE_URL}/product/price-ascending/`;
     } else if (filterState === 2) {
@@ -130,8 +130,8 @@ const Product = ({ activeTab, searchQuery, filterState = 0 }) => {
 
         const matchesSearch =
           searchQuery.trim() === '' ||
-          similarity(product.name, searchQuery) >= 60 ||
-          similarity(product.description || '', searchQuery) >= 60;
+          similarity(product.name, searchQuery) >= 30 ||
+          similarity(product.description || '', searchQuery) >= 30;
         return inCategory && matchesSearch;
       }),
     [products, activeTab, searchQuery]

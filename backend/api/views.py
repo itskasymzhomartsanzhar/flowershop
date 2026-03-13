@@ -142,14 +142,15 @@ def _absolute_media_url(request, file_field):
     return url
 
 
-def _format_recipient_block(is_recipient_self, user, recipient_name, recipient_phone):
+def _format_recipient_block(is_recipient_self, user, recipient_name, recipient_phone, payer_phone=None):
     payer_name = user.name or (f'@{user.telegram_username}' if user.telegram_username else str(user.tg_id))
-    payer_phone = _normalize_phone(recipient_phone)
+    payer_phone_norm = _normalize_phone(payer_phone)
+    recipient_phone_norm = _normalize_phone(recipient_phone)
     if is_recipient_self:
-        return f"Заказчик и получатель: <b>{payer_name}</b>, <b>{payer_phone or 'не указан'}</b>"
+        return f"Заказчик и получатель: <b>{payer_name}</b>, <b>{payer_phone_norm or 'не указан'}</b>"
     return (
-        f"Заказчик: <b>{payer_name}</b>, <b>{payer_phone or 'не указан'}</b>\n"
-        f"Получатель: <b>{recipient_name}</b>, <b>{_normalize_phone(recipient_phone) or 'не указан'}</b>"
+        f"Заказчик: <b>{payer_name}</b>, <b>{payer_phone_norm or 'не указан'}</b>\n"
+        f"Получатель: <b>{recipient_name or 'не указан'}</b>, <b>{recipient_phone_norm or 'не указан'}</b>"
     )
 
 
@@ -184,7 +185,8 @@ def build_assemblers_order_text(payment_session):
         payment_session.is_recipient_self,
         payment_session.user,
         payment_session.recipient_name,
-        payment_session.recipient_phone or payment_session.phone,
+        payment_session.recipient_phone,
+        payment_session.phone,
     )
     items = payment_session.goods or []
     items_lines = []
@@ -260,7 +262,8 @@ def build_payment_status_text(payment_session):
         payment_session.is_recipient_self,
         payment_session.user,
         payment_session.recipient_name,
-        payment_session.recipient_phone or payment_session.phone,
+        payment_session.recipient_phone,
+        payment_session.phone,
     )
     if payment_session.status == PaymentSession.StatusEnum.SUCCEEDED:
         return (
@@ -735,6 +738,12 @@ class UsersViewSet(viewsets.ModelViewSet):
             return 0
         return int(settings_obj.percentage or 0)
 
+    def _get_delivery_fee(self):
+        settings_obj = DeliverySettings.objects.first()
+        if not settings_obj:
+            return 0
+        return int(settings_obj.delivery_fee or 0)
+
     @staticmethod
     def _get_product_step(product):
         step = int(getattr(product, 'quantity_step', 1) or 1)
@@ -766,7 +775,7 @@ class UsersViewSet(viewsets.ModelViewSet):
     def _get_delivery_settings(self):
         settings_obj = DeliverySettings.objects.first()
         if not settings_obj:
-            settings_obj = DeliverySettings(min_days_ahead=0, max_days_ahead=14)
+            settings_obj = DeliverySettings(min_days_ahead=0, max_days_ahead=14, delivery_fee=0)
         slots = list(
             DeliveryTimeSlot.objects.filter(is_active=True)
             .order_by('sort_order', 'label')
@@ -778,10 +787,11 @@ class UsersViewSet(viewsets.ModelViewSet):
         max_days = int(settings_obj.max_days_ahead or 14)
         if max_days < min_days:
             max_days = min_days
-        return min_days, max_days, slots
+        delivery_fee = int(settings_obj.delivery_fee or 0)
+        return min_days, max_days, slots, delivery_fee
 
     def _delivery_options_payload(self):
-        min_days, max_days, slots = self._get_delivery_settings()
+        min_days, max_days, slots, delivery_fee = self._get_delivery_settings()
         min_date = date.today() + timedelta(days=min_days)
         max_date = date.today() + timedelta(days=max_days)
         return {
@@ -791,6 +801,7 @@ class UsersViewSet(viewsets.ModelViewSet):
             'max_date': max_date.isoformat(),
             'time_slots': slots,
             'default_time_slot': slots[0] if slots else None,
+            'delivery_fee': delivery_fee,
         }
 
     def _validate_delivery_selection(self, delivery_date_raw, delivery_time_slot_raw):
@@ -914,7 +925,7 @@ class UsersViewSet(viewsets.ModelViewSet):
     def delivery_options(self, request):
         return Response(self._delivery_options_payload())
 
-    def _build_cart_snapshot(self, request, tg_id, discount_percent=0):
+    def _build_cart_snapshot(self, request, tg_id, discount_percent=0, is_pickup=True):
         key = f'cart:{tg_id}'
         raw_cart = cache.get(key, {}) or {}
 
@@ -930,7 +941,7 @@ class UsersViewSet(viewsets.ModelViewSet):
 
         if not parsed_items:
             cache.delete(key)
-            return {'cart': [], 'summary': {'items_count': 0, 'subtotal': 0, 'service_fee_percent': 0, 'service_fee_amount': 0, 'discount_percent': 0, 'discount_amount': 0, 'total': 0}}
+            return {'cart': [], 'summary': {'items_count': 0, 'subtotal': 0, 'service_fee_percent': 0, 'service_fee_amount': 0, 'delivery_fee_amount': 0, 'discount_percent': 0, 'discount_amount': 0, 'total': 0}}
 
         product_ids = [item[0] for item in parsed_items]
         products = Product.objects.filter(id__in=product_ids)
@@ -971,12 +982,16 @@ class UsersViewSet(viewsets.ModelViewSet):
 
         if not cart_items:
             cache.delete(key)
-            return {'cart': [], 'summary': {'items_count': 0, 'subtotal': 0, 'service_fee_percent': 0, 'service_fee_amount': 0, 'discount_percent': 0, 'discount_amount': 0, 'total': 0}}
+            return {'cart': [], 'summary': {'items_count': 0, 'subtotal': 0, 'service_fee_percent': 0, 'service_fee_amount': 0, 'delivery_fee_amount': 0, 'discount_percent': 0, 'discount_amount': 0, 'total': 0}}
 
         service_fee_percent = self._get_service_fee_percentage()
         service_fee_amount = 0
         if service_fee_percent > 0:
             service_fee_amount = self._round_money(Decimal(subtotal) * Decimal(service_fee_percent) / Decimal(100))
+
+        delivery_fee_amount = 0
+        if not is_pickup:
+            delivery_fee_amount = max(0, self._get_delivery_fee())
 
         base_total = subtotal + service_fee_amount
         discount_percent = max(0, min(100, int(discount_percent or 0)))
@@ -984,13 +999,14 @@ class UsersViewSet(viewsets.ModelViewSet):
         if discount_percent > 0:
             discount_amount = self._round_money(Decimal(base_total) * Decimal(discount_percent) / Decimal(100))
 
-        total = max(0, base_total - discount_amount)
+        total = max(0, base_total - discount_amount) + delivery_fee_amount
 
         summary = {
             'items_count': total_quantity,
             'subtotal': subtotal,
             'service_fee_percent': service_fee_percent,
             'service_fee_amount': service_fee_amount,
+            'delivery_fee_amount': delivery_fee_amount,
             'discount_percent': discount_percent,
             'discount_amount': discount_amount,
             'total': total,
@@ -1119,7 +1135,7 @@ class UsersViewSet(viewsets.ModelViewSet):
         if promo_error:
             return Response({'error': promo_error}, status=status.HTTP_400_BAD_REQUEST)
 
-        snapshot = self._build_cart_snapshot(request, tg_id, discount_percent=discount_percent)
+        snapshot = self._build_cart_snapshot(request, tg_id, discount_percent=discount_percent, is_pickup=is_pickup)
         cart_items = snapshot['cart']
         summary = snapshot['summary']
 
@@ -1400,7 +1416,8 @@ class UsersViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def get_cart(self, request):
         tg_id = str(self.request.tg_user_data['tg_id'])
-        snapshot = self._build_cart_snapshot(request, tg_id)
+        is_pickup = self._to_bool(request.query_params.get('is_pickup', True))
+        snapshot = self._build_cart_snapshot(request, tg_id, is_pickup=is_pickup)
         return Response(snapshot)
     
     @action(detail=False, methods=['post'])
@@ -1506,7 +1523,8 @@ class UsersViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='apply-promocode')
     def apply_promocode(self, request):
         promocode_text = request.data.get('promocode', '').strip().upper()
-        tg_id = self.request.tg_user_data.get('tg_id')
+        tg_id = self._resolve_tg_id(request)
+        is_pickup = self._to_bool(request.data.get('is_pickup', True))
 
         if not promocode_text or not tg_id:
             return Response({
@@ -1514,7 +1532,7 @@ class UsersViewSet(viewsets.ModelViewSet):
                 'message': 'Некорректные данные'
             }, status=400)
 
-        user = get_object_or_404(Users, tg_id=tg_id)
+        user = get_object_or_404(Users, tg_id=str(tg_id))
         promocode, discount_percent, promo_error = self._resolve_promocode(user, promocode_text)
 
         if promo_error:
@@ -1523,7 +1541,7 @@ class UsersViewSet(viewsets.ModelViewSet):
                 'message': promo_error
             }, status=400)
 
-        snapshot = self._build_cart_snapshot(request, str(tg_id), discount_percent=discount_percent)
+        snapshot = self._build_cart_snapshot(request, str(tg_id), discount_percent=discount_percent, is_pickup=is_pickup)
 
         return Response({
             'success': True,
@@ -1534,7 +1552,7 @@ class UsersViewSet(viewsets.ModelViewSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.all().order_by('sort_order', 'id')
     serializer_class = ProductSerializer
     http_method_names = ['get']
 
@@ -1547,7 +1565,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='recommended')
     def get_recommended(self, request):
-        products = Product.objects.all()
+        products = Product.objects.all().order_by('sort_order', 'id')
         
         if products.count() < 4:
             serializer = self.get_serializer(products, many=True)
@@ -1578,13 +1596,13 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='price-ascending')
     def get_by_price_asc(self, request):
-        products = Product.objects.all().order_by('price')
+        products = Product.objects.all().order_by('price', 'sort_order', 'id')
         serializer = self.get_serializer(products, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'], url_path='price-descending')
     def get_by_price_desc(self, request):
-        products = Product.objects.all().order_by('-price')
+        products = Product.objects.all().order_by('-price', 'sort_order', 'id')
         serializer = self.get_serializer(products, many=True)
         return Response(serializer.data)
 
@@ -1701,13 +1719,13 @@ class PosterViewSet(viewsets.ModelViewSet):
     http_method_names = ['get']
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.order_by('name')
+    queryset = Category.objects.order_by('sort_order', 'id')
     serializer_class = CategorySerializer
     http_method_names = ['get']
 
     @action(detail=False, methods=['get'])
     def get_categories(self, request):
-        categories = Category.objects.order_by('name')
+        categories = Category.objects.order_by('sort_order', 'id')
         serializer = self.get_serializer(categories, many=True)
         return Response(serializer.data)
     

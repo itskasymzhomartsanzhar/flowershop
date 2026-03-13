@@ -12,6 +12,16 @@ const Confirm = () => {
   const initialTotal = location.state?.total || 0;
   const [baseTotal, setBaseTotal] = useState(initialTotal);
   const [finalTotal, setFinalTotal] = useState(initialTotal);
+  const [summary, setSummary] = useState({
+    items_count: 0,
+    subtotal: 0,
+    service_fee_percent: 0,
+    service_fee_amount: 0,
+    delivery_fee_amount: 0,
+    discount_percent: 0,
+    discount_amount: 0,
+    total: initialTotal,
+  });
 
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -22,6 +32,7 @@ const Confirm = () => {
   const [comment, setComment] = useState('');
   const [promocode, setPromocode] = useState('');
   const [toast, setToast] = useState('');
+  const [paymentAlertOpen, setPaymentAlertOpen] = useState(false);
   const [discount, setDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [paymentRequested, setPaymentRequested] = useState(false);
@@ -37,6 +48,7 @@ const Confirm = () => {
   const [isAddressSuggestionsLoading, setIsAddressSuggestionsLoading] = useState(false);
   const [isAddressInputFocused, setIsAddressInputFocused] = useState(false);
   const addressSuggestRef = useRef(null);
+  const promoInitRef = useRef(true);
 
   const formatIsoDate = (iso) => {
     if (!iso) return '';
@@ -76,22 +88,54 @@ const Confirm = () => {
 
   const handlePhoneChange = (value) => setPhone(value);
 
-  useEffect(() => {
-    fetch(API_ENDPOINTS.CART.GET, {
-      method: 'GET',
-      headers: getTelegramHeaders(),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const cartTotal = data?.summary?.total || 0;
-        setBaseTotal(cartTotal);
-        setFinalTotal(cartTotal);
-      })
-      .catch(() => {
-        setBaseTotal(initialTotal);
-        setFinalTotal(initialTotal);
+  const loadCartSummary = async (pickupFlag) => {
+    try {
+      const res = await fetch(`${API_ENDPOINTS.CART.GET}?is_pickup=${pickupFlag}`, {
+        method: 'GET',
+        headers: getTelegramHeaders(),
       });
-  }, [initialTotal]);
+      const data = await res.json();
+      const nextSummary = data?.summary || {};
+      setSummary((prev) => ({ ...prev, ...nextSummary }));
+      const cartTotal = nextSummary.total ?? 0;
+      setBaseTotal(cartTotal);
+      setFinalTotal(cartTotal);
+    } catch {
+      setBaseTotal(initialTotal);
+      setFinalTotal(initialTotal);
+    }
+  };
+
+  const applyPromocode = async (promoValue, pickupFlag) => {
+    try {
+      const res = await fetch(API_ENDPOINTS.PROMOCODE.APPLY, {
+        method: 'POST',
+        headers: getTelegramHeaders(),
+        body: JSON.stringify({ promocode: promoValue, is_pickup: pickupFlag }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDiscount(data.discount / 100);
+        const nextSummary = data?.summary || {};
+        setSummary((prev) => ({ ...prev, ...nextSummary }));
+        setFinalTotal(nextSummary.total ?? baseTotal);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    setDiscount(0);
+    loadCartSummary(pickupFlag);
+  };
+
+  useEffect(() => {
+    const trimmedPromo = promocode.trim();
+    if (trimmedPromo) {
+      applyPromocode(trimmedPromo, isPickup);
+    } else {
+      loadCartSummary(isPickup);
+    }
+  }, [isPickup]);
 
   useEffect(() => {
     fetch(API_ENDPOINTS.DELIVERY.OPTIONS, {
@@ -178,35 +222,21 @@ const Confirm = () => {
 
   // Валидация промокода
   useEffect(() => {
-    const validatePromocode = async () => {
-      const trimmedPromo = promocode.trim();
-      if (trimmedPromo === '') {
+    if (promoInitRef.current) {
+      promoInitRef.current = false;
+      return;
+    }
+    const trimmedPromo = promocode.trim();
+    const timeoutId = setTimeout(() => {
+      if (!trimmedPromo) {
         setDiscount(0);
-        setFinalTotal(baseTotal);
+        loadCartSummary(isPickup);
         return;
       }
-      try {
-        const res = await fetch(API_ENDPOINTS.PROMOCODE.APPLY, {
-          method: 'POST',
-          headers: getTelegramHeaders(),
-          body: JSON.stringify({ promocode: trimmedPromo }),
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setDiscount(data.discount / 100);
-          setFinalTotal(data?.summary?.total ?? baseTotal);
-        } else {
-          setDiscount(0);
-          setFinalTotal(baseTotal);
-        }
-      } catch {
-        setDiscount(0);
-        setFinalTotal(baseTotal);
-      }
-    };
-    const timeoutId = setTimeout(validatePromocode, 500);
+      applyPromocode(trimmedPromo, isPickup);
+    }, 500);
     return () => clearTimeout(timeoutId);
-  }, [promocode, baseTotal]);
+  }, [promocode]);
 
   const handlePayment = async () => {
     if (paymentRequested) {
@@ -269,7 +299,7 @@ const Confirm = () => {
       }
 
       setPaymentRequested(true);
-      showToast('Ссылка на оплату отправлена в Telegram-бот');
+      setPaymentAlertOpen(true);
       setLoading(false);
     } catch (err) {
       console.error('❌ Критическая ошибка при оплате:', err);
@@ -288,6 +318,25 @@ const Confirm = () => {
   return (
     <>
       {toast && <div className="toast">{toast}</div>}
+      {paymentAlertOpen && (
+        <div className="payment-alert">
+          <div className="payment-alert__card">
+            <div className="payment-alert__text">Ссылка на оплату отправлена в Telegram-бот</div>
+            <button
+              className="payment-alert__btn"
+              onClick={() => {
+                setPaymentAlertOpen(false);
+                const tg = window.Telegram?.WebApp;
+                if (tg && typeof tg.close === 'function') {
+                  tg.close();
+                }
+              }}
+            >
+              Ок
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="progress">
         <div className="progress__bar progress__bar--full"></div>
@@ -491,6 +540,22 @@ const Confirm = () => {
       </div>
 
       <div className="checkout">
+        {(summary.service_fee_amount > 0 || (!isPickup && summary.delivery_fee_amount > 0)) && (
+          <div className="checkout__summary">
+            {summary.service_fee_amount > 0 && (
+              <div className="checkout__row">
+                <span>Сервисный сбор ({summary.service_fee_percent}%)</span>
+                <span>{formatPrice(summary.service_fee_amount)}₽</span>
+              </div>
+            )}
+            {!isPickup && summary.delivery_fee_amount > 0 && (
+              <div className="checkout__row">
+                <span>Доставка</span>
+                <span>{formatPrice(summary.delivery_fee_amount)}₽</span>
+              </div>
+            )}
+          </div>
+        )}
         <button
           className="checkout__btn"
           onClick={handlePayment}

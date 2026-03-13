@@ -36,11 +36,11 @@ STATUS_LABELS = {
 }
 
 ACTION_LABELS = {
-    Orders.StatusEnum.ASSEMBLING_STARTED: "Сборка начата",
-    Orders.StatusEnum.ASSEMBLING_DONE: "Сборка готова",
+    Orders.StatusEnum.ASSEMBLING_STARTED: "Сборка начата 📦",
+    Orders.StatusEnum.ASSEMBLING_DONE: "Готово ✅",
     Orders.StatusEnum.COURIER_PICKED: "Курьер забрал",
-    Orders.StatusEnum.DELIVERING: "Доставка",
-    Orders.StatusEnum.DELIVERED: "Доставлено",
+    Orders.StatusEnum.DELIVERING: "На доставке 🚚",
+    Orders.StatusEnum.DELIVERED: "Доставлен 💚",
     Orders.StatusEnum.READY_FOR_PICKUP: "Готов к выдаче",
     Orders.StatusEnum.ISSUED: "Выдан",
 }

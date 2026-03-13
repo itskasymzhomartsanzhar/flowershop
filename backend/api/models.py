@@ -42,6 +42,7 @@ class Poster(models.Model):
 class Category(models.Model):
     
     name = models.CharField('Название', max_length=300, null=True, blank=True)
+    sort_order = models.PositiveIntegerField('Порядок', default=0)
 
     list_per_page = 500
 
@@ -51,6 +52,7 @@ class Category(models.Model):
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
+        ordering = ['sort_order', 'id']
 
 class Promocode(models.Model):
     
@@ -91,6 +93,7 @@ class ServiceFeeSettings(models.Model):
 class DeliverySettings(models.Model):
     min_days_ahead = models.PositiveSmallIntegerField('Минимум дней до доставки', default=0)
     max_days_ahead = models.PositiveSmallIntegerField('Максимум дней до доставки', default=14)
+    delivery_fee = models.PositiveIntegerField('Стоимость доставки', default=0)
 
     def clean(self):
         if self.max_days_ahead < self.min_days_ahead:
@@ -105,7 +108,7 @@ class DeliverySettings(models.Model):
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'Доставка: {self.min_days_ahead}-{self.max_days_ahead} дней'
+        return f'Доставка: {self.min_days_ahead}-{self.max_days_ahead} дней, {self.delivery_fee} ₽'
 
     class Meta:
         verbose_name = 'Настройки отложенной доставки'
@@ -202,6 +205,7 @@ class Product(models.Model):
     display = models.BooleanField("Показывать", default=True)
     in_stock = models.BigIntegerField('Количество на складе', null=True, blank=True)
     quantity_step = models.PositiveIntegerField('Шаг количества', default=1)
+    sort_order = models.PositiveIntegerField('Порядок', default=0)
     
 
     
@@ -210,6 +214,7 @@ class Product(models.Model):
     class Meta:
         verbose_name = 'Товар'
         verbose_name_plural = 'Товары'
+        ordering = ['sort_order', 'id']
     
     def __str__(self):
         return self.name or 'Без названия'

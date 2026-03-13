@@ -11,6 +11,7 @@ const CartItems = () => {
   const totalPrice = calculateTotalPrice();
   const serviceFee = summary.service_fee_amount || 0;
   const serviceFeePercent = summary.service_fee_percent || 0;
+  const deliveryFee = summary.delivery_fee_amount || 0;
 
   const goods = products
     .filter((product) => counts[product.id])
@@ -63,8 +64,14 @@ const CartItems = () => {
           <div className="cart__footer">
             {serviceFee > 0 && (
               <div className="cart__fee-row">
-                <span>Сервисный сбор ({serviceFeePercent}%) 🚚📦 (за доставку и упаковку)</span>
+                <span>Сервисный сбор ({serviceFeePercent}%) (за упакову и работу флориста)</span>
                 <span>{formatPrice(serviceFee)}₽</span>
+              </div>
+            )}
+            {deliveryFee > 0 && (
+              <div className="cart__fee-row">
+                <span>Доставка</span>
+                <span>{formatPrice(deliveryFee)}₽</span>
               </div>
             )}
             <button className="cart__checkout-btn">

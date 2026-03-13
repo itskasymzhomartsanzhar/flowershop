@@ -19,7 +19,9 @@ from django.utils.html import format_html
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'quantity_step', 'in_stock', 'display')
+    list_display = ('name', 'sort_order', 'price', 'quantity_step', 'in_stock', 'display')
+    list_editable = ('sort_order',)
+    list_display_links = ('name',)
     list_filter = ('display', 'category')
     search_fields = ('name',)
     actions = ['enable_auto_sync', 'disable_auto_sync']
@@ -34,9 +36,30 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Orders)
 class OrdersAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'price', 'status', 'is_pickup', 'is_recipient_self', 'delivery_date', 'delivery_time_slot', 'isreturn', 'order_date']
+    list_display = [
+        'order_number',
+        'status',
+        'order_date',
+        'price',
+        'items_summary',
+        'comment',
+        'delivery_time_slot',
+        'delivery_address',
+        'recipient_phone',
+        'promocode',
+        'payer_name',
+        'customer_username',
+        'payer_phone',
+    ]
     list_filter = ['status', 'is_pickup', 'is_recipient_self', 'delivery_date', 'isreturn', 'order_date']
-    search_fields = ['name', 'track_code', 'user__telegram_username']
+    search_fields = [
+        'name',
+        'track_code',
+        'user__telegram_username',
+        'payer_name',
+        'payer_phone',
+        'recipient_phone',
+    ]
     inlines = [OrderItemInline]
 
     """     def has_add_permission(self, request):
@@ -55,6 +78,28 @@ class OrdersAdmin(admin.ModelAdmin):
             return HttpResponseRedirect(reverse('admin:api_orders_changelist'))
 
         return super().response_change(request, obj)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('user').prefetch_related('order_items__product')
+
+    @admin.display(description='Номер заказа')
+    def order_number(self, obj):
+        return obj.track_code or obj.id
+
+    @admin.display(description='Юзернейм заказчика')
+    def customer_username(self, obj):
+        if obj.user and obj.user.telegram_username:
+            return obj.user.telegram_username
+        return ''
+
+    @admin.display(description='Состав заказа')
+    def items_summary(self, obj):
+        items = []
+        for item in obj.order_items.all():
+            product_name = item.product.name if item.product else 'Товар'
+            items.append(f'{product_name} x{item.quantity}')
+        return '; '.join(items)
 
     def save_model(self, request, obj, form, change):
         if change and 'status' in form.changed_data:
@@ -82,7 +127,9 @@ class UsersAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['name']
+    list_display = ['name', 'sort_order']
+    list_editable = ['sort_order']
+    list_display_links = ['name']
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
@@ -119,7 +166,7 @@ class ServiceFeeSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(DeliverySettings)
 class DeliverySettingsAdmin(admin.ModelAdmin):
-    list_display = ['min_days_ahead', 'max_days_ahead']
+    list_display = ['min_days_ahead', 'max_days_ahead', 'delivery_fee']
 
     def has_add_permission(self, request):
         if DeliverySettings.objects.exists():

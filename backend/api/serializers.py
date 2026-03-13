@@ -77,7 +77,8 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'photo1', 'photo2', 'photo3', 'photo4', 'photo5',
                   'photo6', 'photo7', 'photo8', 'photo9', 'photo10',
                   'description', 'price', 'oldprice', 'category', 'category_name',
-                  'flug_new', 'flug_popular', 'in_stock', 'quantity_step', 'reviews', 'average_rating', 'reviews_count']
+                  'flug_new', 'flug_popular', 'in_stock', 'quantity_step', 'sort_order',
+                  'reviews', 'average_rating', 'reviews_count']
 
     def _convert_to_https(self, photo_field):
         return build_media_url(photo_field, self.context.get('request'))
