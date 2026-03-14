@@ -167,6 +167,10 @@ async def handle_staff_order_action(callback_query, bot: Bot):
         recipient_name = order.recipient_name or payer_name
         recipient_phone = order.recipient_phone or payer_phone
         status_label = get_status_label(order.status)
+        tg_username = order.user.telegram_username or ""
+        if tg_username and not tg_username.startswith('@'):
+            tg_username = f'@{tg_username}'
+        tg_suffix = f" ({tg_username})" if tg_username else ""
 
         items = []
         for item in order.order_items.all():
@@ -174,10 +178,10 @@ async def handle_staff_order_action(callback_query, bot: Bot):
         items_block = "\n".join(items) if items else "Состав заказа недоступен"
 
         if order.is_recipient_self:
-            recipient_block = f"Заказчик и получатель: <b>{payer_name}</b>, <b>{payer_phone or 'не указан'}</b>\n"
+            recipient_block = f"Заказчик и получатель: <b>{payer_name}</b>{tg_suffix}, <b>{payer_phone or 'не указан'}</b>\n"
         else:
             recipient_block = (
-                f"Заказчик: <b>{payer_name}</b>, <b>{payer_phone or 'не указан'}</b>\n"
+                f"Заказчик: <b>{payer_name}</b>{tg_suffix}, <b>{payer_phone or 'не указан'}</b>\n"
                 f"Получатель: <b>{recipient_name}</b>, <b>{recipient_phone or 'не указан'}</b>\n"
             )
 

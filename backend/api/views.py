@@ -205,6 +205,10 @@ def build_assemblers_order_text(payment_session):
     status_label = get_status_label(getattr(payment_session.order, 'status', None))
     promo_line = f"Промокод: <b>{payment_session.promocode}</b>\n" if payment_session.promocode else ""
     comment_line = f"Комментарий: <b>{payment_session.comment}</b>\n" if payment_session.comment else ""
+    tg_username = payment_session.user.telegram_username if payment_session.user else ""
+    if tg_username and not tg_username.startswith('@'):
+        tg_username = f'@{tg_username}'
+    tg_suffix = f" ({tg_username})" if tg_username else ""
     return (
         f"Заказ: <b>#{order_number}</b>\n"
         f"Статус: <b>{status_label}</b>\n"
@@ -212,7 +216,7 @@ def build_assemblers_order_text(payment_session):
         f"Формат: <b>{delivery_mode}</b>\n"
         f"Время: <b>{delivery_dt}</b>\n"
         f"Адрес: <b>{address_text}</b>\n"
-        f"Контакт заказчика: <b>{_normalize_phone(payment_session.phone) or 'не указан'}</b>\n"
+        f"Контакт заказчика: <b>{_normalize_phone(payment_session.phone) or 'не указан'}</b>{tg_suffix}\n"
         f"{recipient_block}\n"
         f"{promo_line}"
         f"{comment_line}\n"
