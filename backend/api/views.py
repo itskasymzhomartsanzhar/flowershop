@@ -154,6 +154,21 @@ def _format_recipient_block(is_recipient_self, user, recipient_name, recipient_p
     )
 
 
+def _format_staff_delivery_dt(delivery_date, delivery_time_slot):
+    if not delivery_date:
+        return "Как можно скорее"
+    try:
+        day_month = delivery_date.strftime('%d.%m')
+        year = delivery_date.strftime('%Y')
+    except Exception:
+        day_month = str(delivery_date)
+        year = ""
+    time_slot = (delivery_time_slot or '').strip()
+    if time_slot:
+        return f"{day_month} {time_slot} {year}".strip()
+    return f"{day_month} {year}".strip()
+
+
 def send_assemblers_order_message(chat_id, text, reply_markup=None):
     if not chat_id:
         return False, None
@@ -180,7 +195,7 @@ def build_assemblers_order_text(payment_session):
     order_number = payment_session.order.track_code if payment_session.order_id else payment_session.payment_id[:8].upper()
     delivery_mode = "Самовывоз" if payment_session.is_pickup else "Доставка"
     address_text = PICKUP_ADDRESS_PLACEHOLDER if payment_session.is_pickup else (payment_session.address or "Не указан")
-    delivery_dt = f"{payment_session.delivery_date} {payment_session.delivery_time_slot}".strip() if payment_session.delivery_date else "Как можно скорее"
+    delivery_dt = _format_staff_delivery_dt(payment_session.delivery_date, payment_session.delivery_time_slot)
     recipient_block = _format_recipient_block(
         payment_session.is_recipient_self,
         payment_session.user,
@@ -656,9 +671,10 @@ class UsersViewSet(viewsets.ModelViewSet):
         text = (
             "Условия доставки🚚\n\n"
             "Мы доставляем заказы по Краснодару собственными курьерами, чтобы контролировать качество сервиса и сохранить свежесть цветов до момента вручения.\n\n"
-            "В периоды высокой загрузки, когда количество заказов сильно увеличивается, мы можем привлекать курьерские службы-партнёры. Это позволяет не задерживать доставку и привозить заказы в запланированное время.\n\n"
-            "Доставка по Краснодару входит в сервисный сбор. В него также входит упаковка цветов и подготовка заказа к отправке.\n\n"
-            "Размер сервисного сбора составляет 15% от суммы заказа."
+            "В периоды высокой загрузки, когда количество заказов сильно увеличивается, мы можем привлекать курьерские службы-партнёры.\n\n"
+            "Доставка по Краснодару составляет — 500₽.\n"
+            "В сервисный сбор входит упаковка цветов и подготовка заказа к отправке.\n\n"
+            "Размер сервисного сбора составляет 10% от суммы заказа."
         )
         sent, _ = send_telegram_status_message(user.tg_id, text)
         return Response({'ok': bool(sent)})

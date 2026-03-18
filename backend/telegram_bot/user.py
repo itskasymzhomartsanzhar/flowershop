@@ -92,9 +92,10 @@ async def start_message(message: Message, bot: Bot, command: CommandObject, stat
         text = (
             "Условия доставки🚚\n\n"
             "Мы доставляем заказы по Краснодару собственными курьерами, чтобы контролировать качество сервиса и сохранить свежесть цветов до момента вручения.\n\n"
-            "В периоды высокой загрузки, когда количество заказов сильно увеличивается, мы можем привлекать курьерские службы-партнёры. Это позволяет не задерживать доставку и привозить заказы в запланированное время.\n\n"
-            "Доставка по Краснодару входит в сервисный сбор. В него также входит упаковка цветов и подготовка заказа к отправке.\n\n"
-            "Размер сервисного сбора составляет 15% от суммы заказа."
+            "В периоды высокой загрузки, когда количество заказов сильно увеличивается, мы можем привлекать курьерские службы-партнёры.\n\n"
+            "Доставка по Краснодару составляет — 500₽.\n"
+            "В сервисный сбор входит упаковка цветов и подготовка заказа к отправке.\n\n"
+            "Размер сервисного сбора составляет 10% от суммы заказа."
         )
         await message.answer(text)
         return
@@ -115,9 +116,10 @@ async def handle_web_app_data(message: Message):
     text = (
         "Условия доставки🚚\n\n"
         "Мы доставляем заказы по Краснодару собственными курьерами, чтобы контролировать качество сервиса и сохранить свежесть цветов до момента вручения.\n\n"
-        "В периоды высокой загрузки, когда количество заказов сильно увеличивается, мы можем привлекать курьерские службы-партнёры. Это позволяет не задерживать доставку и привозить заказы в запланированное время.\n\n"
-        "Доставка по Краснодару входит в сервисный сбор. В него также входит упаковка цветов и подготовка заказа к отправке.\n\n"
-        "Размер сервисного сбора составляет 15% от суммы заказа."
+        "В периоды высокой загрузки, когда количество заказов сильно увеличивается, мы можем привлекать курьерские службы-партнёры.\n\n"
+        "Доставка по Краснодару составляет — 500₽.\n"
+        "В сервисный сбор входит упаковка цветов и подготовка заказа к отправке.\n\n"
+        "Размер сервисного сбора составляет 10% от суммы заказа."
     )
     await message.answer(text)
 
@@ -161,7 +163,20 @@ async def handle_staff_order_action(callback_query, bot: Bot):
     def _build_staff_text(order):
         delivery_mode = "Самовывоз" if order.is_pickup else "Доставка"
         address = "Самовывоз" if order.is_pickup else (order.delivery_address or "Не указан")
-        delivery_dt = f"{order.delivery_date} {order.delivery_time_slot}".strip() if order.delivery_date else "Как можно скорее"
+        if order.delivery_date:
+            try:
+                day_month = order.delivery_date.strftime('%d.%m')
+                year = order.delivery_date.strftime('%Y')
+            except Exception:
+                day_month = str(order.delivery_date)
+                year = ""
+            time_slot = (order.delivery_time_slot or '').strip()
+            if time_slot:
+                delivery_dt = f"{day_month} {time_slot} {year}".strip()
+            else:
+                delivery_dt = f"{day_month} {year}".strip()
+        else:
+            delivery_dt = "Как можно скорее"
         payer_name = order.payer_name or order.user.name or order.user.telegram_username or str(order.user.tg_id)
         payer_phone = order.payer_phone or ""
         recipient_name = order.recipient_name or payer_name

@@ -43,7 +43,7 @@ class OrdersAdmin(admin.ModelAdmin):
         'price',
         'items_summary',
         'comment',
-        'delivery_time_slot',
+        'delivery_datetime_display',
         'delivery_address',
         'recipient_phone',
         'promocode',
@@ -92,6 +92,21 @@ class OrdersAdmin(admin.ModelAdmin):
         if obj.user and obj.user.telegram_username:
             return obj.user.telegram_username
         return ''
+
+    @admin.display(description='Время доставки')
+    def delivery_datetime_display(self, obj):
+        if not obj.delivery_date:
+            return obj.delivery_time_slot or ''
+        try:
+            day_month = obj.delivery_date.strftime('%d.%m')
+            year = obj.delivery_date.strftime('%Y')
+        except Exception:
+            day_month = str(obj.delivery_date)
+            year = ''
+        time_slot = (obj.delivery_time_slot or '').strip()
+        if time_slot:
+            return f'{day_month} {time_slot} {year}'.strip()
+        return f'{day_month} {year}'.strip()
 
     @admin.display(description='Состав заказа')
     def items_summary(self, obj):
