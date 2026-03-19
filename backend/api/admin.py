@@ -98,15 +98,13 @@ class OrdersAdmin(admin.ModelAdmin):
         if not obj.delivery_date:
             return obj.delivery_time_slot or ''
         try:
-            day_month = obj.delivery_date.strftime('%d.%m')
-            year = obj.delivery_date.strftime('%Y')
+            date_str = obj.delivery_date.strftime('%d.%m.%Y')
         except Exception:
-            day_month = str(obj.delivery_date)
-            year = ''
+            date_str = str(obj.delivery_date)
         time_slot = (obj.delivery_time_slot or '').strip()
         if time_slot:
-            return f'{day_month} {time_slot} {year}'.strip()
-        return f'{day_month} {year}'.strip()
+            return f'{date_str}\n{time_slot}'
+        return date_str
 
     @admin.display(description='Состав заказа')
     def items_summary(self, obj):
