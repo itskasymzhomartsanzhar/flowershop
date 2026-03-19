@@ -29,6 +29,8 @@ pillow==11.3.0
 propcache==0.3.2
 pydantic==2.11.7
 pydantic_core==2.33.2
+psycopg2-binary
+redis==6.2.0
 redis==6.2.0
 requests==2.32.4
 sqlparse==0.5.3

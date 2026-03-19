@@ -1,0 +1,14 @@
+FROM python:3.11-alpine
+
+RUN apk add --no-cache gcc musl-dev libpq-dev
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY sync_orders.py .
+
+RUN echo "*/5 * * * * cd /app && python sync_orders.py >> /var/log/sync.log 2>&1" > /etc/crontabs/root
+
+CMD ["crond", "-f", "-l", "2"]

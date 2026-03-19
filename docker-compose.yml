@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   redis:
     image: redis:7-alpine
@@ -12,6 +10,24 @@ services:
       - flowershop_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: flowershop_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: flowershop
+      POSTGRES_USER: flowershop
+      POSTGRES_PASSWORD: flowershop_db_pwd
+    volumes:
+      - flowershop_pg_data:/var/lib/postgresql/data
+    networks:
+      - flowershop_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowershop"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -41,8 +57,15 @@ services:
       YOOKASSA_SECRET_KEY: "live_3qkU7NMTBPyJaNnDTIAaHLkwIO0912AzkhCxcJPAfWk"
       PAYMENT_RETURN_URL: "https://t.me/srezflowers_bot"
       MOCK_PAYMENT_BUTTON: "False"
+      DB_NAME: flowershop
+      DB_USER: flowershop
+      DB_PASSWORD: flowershop_db_pwd
+      DB_HOST: postgres
+      DB_PORT: "5432"
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - flowershop_network
@@ -62,11 +85,18 @@ services:
       BOT_TOKEN: 7898807263:AAEVGakrVXbQxLXE7jeMTThmruE0ZXz9RBE
       REDIS_URL: redis://redis:6379/0
       ORDER_ASSEMBLERS_CHAT_ID: "-1003822871974"
+      DB_NAME: flowershop
+      DB_USER: flowershop
+      DB_PASSWORD: flowershop_db_pwd
+      DB_HOST: postgres
+      DB_PORT: "5432"
     depends_on:
       redis:
         condition: service_healthy
       backend:
         condition: service_started
+      postgres:
+        condition: service_healthy
     networks:
       - flowershop_network
 
@@ -83,11 +113,34 @@ services:
     ports:
       - "3120:5173"
 
+  sync:
+    build:
+      context: ./sync
+      dockerfile: Dockerfile.sync
+    container_name: flowershop_sync
+    restart: always
+    environment:
+      DB_NAME: flowershop
+      DB_USER: flowershop
+      DB_PASSWORD: flowershop_db_pwd
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      SPREADSHEET_ID: "1AShcy1aPMfiBSrv_vUVjsj7BYyUf_6Is-wsjO1KE4P4"
+      SERVICE_ACCOUNT_FILE: /app/service_account.json
+    volumes:
+      - ./sync/service_account.json:/app/service_account.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - flowershop_network
+
 volumes:
   flowershop_static:
   flowershop_media:
   flowershop_node_modules:
   flowershop_redis_data:
+  flowershop_pg_data:
 
 networks:
   flowershop_network:

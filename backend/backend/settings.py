@@ -9,7 +9,7 @@ SECRET_KEY = 'django-insecure-d5lc8wkd0=l3zfhx68&6u2cqdukh-(q^k8gl0z=&zz=(!f=dv+
 DEBUG = 'True'
 
 #DATACHANGE
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "swiftstore_backend", "flowershop.swifttest.ru", "backend"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "swiftstore_backend", "flowershop.swifttest.ru", "backend", "85.239.51.119", "test-site4.swifttest.ru"]
 
 #DATACHANGE
 CSRF_TRUSTED_ORIGINS = [
@@ -96,17 +96,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#    }
+#}
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'flowershop'),
+        'USER': os.getenv('DB_USER', 'flowershop'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'flowershop_db_pwd'),
+        'HOST': os.getenv('DB_HOST', 'postgres'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
-
 # Production (PostgreSQL)
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
+#         'ENGINE': 'django.db.backends.sqlite3',
 #         'NAME': 'swiftstore_db',
 #         'USER': 'swiftstore_user',
 #         'PASSWORD': 'swiftstore_password',
