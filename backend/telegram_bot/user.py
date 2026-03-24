@@ -218,7 +218,7 @@ async def handle_staff_order_action(callback_query, bot: Bot):
 
     def _advance_status():
         with transaction.atomic():
-            order = Orders.objects.select_for_update().select_related('user').prefetch_related('order_items__product').filter(id=order_id).first()
+            order = Orders.objects.select_for_update().filter(id=order_id).first()
             if not order:
                 return None, 'Заказ не найден'
             expected = get_next_status(order)

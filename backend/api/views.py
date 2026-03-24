@@ -451,7 +451,8 @@ def _dispatch_due_payment_reminders(limit=20):
 
 @transaction.atomic
 def ensure_order_for_payment_session(payment_session):
-    locked_session = PaymentSession.objects.select_for_update().select_related('user', 'order').get(pk=payment_session.pk)
+    locked_session = PaymentSession.objects.select_for_update().get(pk=payment_session.pk)
+    locked_session = PaymentSession.objects.select_related('user', 'order').get(pk=locked_session.pk)
     if locked_session.order_id:
         return locked_session.order
 
