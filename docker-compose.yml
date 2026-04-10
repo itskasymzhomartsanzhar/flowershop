@@ -40,7 +40,6 @@ services:
     restart: always
     command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
     volumes:
-      - ./backend:/app
       - flowershop_static:/app/staticfiles
       - flowershop_media:/app/media
     environment:
@@ -79,8 +78,6 @@ services:
     container_name: flowershop_bot
     restart: always
     command: sh -c "until python manage.py migrate --noinput; do echo 'Waiting for DB migrations...'; sleep 3; done; python main.py"
-    volumes:
-      - ./backend:/app
     environment:
       BOT_TOKEN: 7898807263:AAEVGakrVXbQxLXE7jeMTThmruE0ZXz9RBE
       REDIS_URL: redis://redis:6379/0
@@ -117,6 +114,8 @@ services:
       dockerfile: Dockerfile.sync
     container_name: flowershop_sync
     restart: always
+    profiles:
+      - sync
     environment:
       DB_NAME: flowershop
       DB_USER: flowershop
