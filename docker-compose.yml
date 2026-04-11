@@ -134,9 +134,13 @@ services:
 
 volumes:
   flowershop_static:
+    name: flowershop_static
   flowershop_media:
+    name: flowershop_media
   flowershop_redis_data:
+    name: ${REDIS_VOLUME_NAME:-flowershop_redis_data}
   flowershop_pg_data:
+    name: ${POSTGRES_VOLUME_NAME:-flowershop_pg_data}
 
 networks:
   flowershop_network:
